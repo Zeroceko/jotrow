@@ -17,7 +17,7 @@ const Upload: React.FC = () => {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [files, setFiles] = useState<File[]>([]);
-  
+
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [dragActive, setDragActive] = useState(false);
@@ -30,7 +30,7 @@ const Upload: React.FC = () => {
       try {
         const response = await api.get('/api/courses');
         setCourses(response.data);
-        
+
         // Auto-select course if passed in URL
         const params = new URLSearchParams(location.search);
         const courseId = params.get('courseId');
@@ -61,7 +61,7 @@ const Upload: React.FC = () => {
     e.stopPropagation();
     setDragActive(false);
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      const droppedFiles = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+      const droppedFiles = Array.from(e.dataTransfer.files);
       setFiles(prev => [...prev, ...droppedFiles]);
     }
   }, []);
@@ -80,7 +80,7 @@ const Upload: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedCourse || !title) return;
-    
+
     setError('');
     setIsLoading(true);
 
@@ -89,7 +89,7 @@ const Upload: React.FC = () => {
       formData.append('course_id', selectedCourse);
       formData.append('title', title);
       formData.append('content', content);
-      
+
       files.forEach(file => {
         formData.append('files', file);
       });
@@ -97,7 +97,7 @@ const Upload: React.FC = () => {
       await api.post('/api/notes', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      
+
       navigate(`/course/${selectedCourse}`);
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to upload note.');
@@ -161,10 +161,10 @@ const Upload: React.FC = () => {
           </div>
 
           <div className="flex flex-col w-full">
-             <label className="mb-2 text-sm font-bold text-retro-muted tracking-widest uppercase">
+            <label className="mb-2 text-sm font-bold text-retro-muted tracking-widest uppercase">
               ATTACH IMAGES
             </label>
-            <div 
+            <div
               className={`border-2 border-dashed p-8 text-center transition-colors relative
                 ${dragActive ? 'border-retro-accent bg-retro-accent/10' : 'border-retro-border bg-retro-bg'}
               `}
@@ -176,7 +176,7 @@ const Upload: React.FC = () => {
               <input
                 type="file"
                 multiple
-                accept="image/*"
+                accept="image/*,.heic,.heif"
                 onChange={handleFileInput}
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
               />
@@ -189,31 +189,45 @@ const Upload: React.FC = () => {
 
           {files.length > 0 && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
-              {files.map((file, idx) => (
-                <div key={idx} className="relative group aspect-square border-2 border-retro-border overflow-hidden p-1 bg-retro-bg">
-                  <img 
-                    src={URL.createObjectURL(file)} 
-                    alt="preview" 
-                    className="w-full h-full object-cover"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => removeFile(idx)}
-                    className="absolute top-2 right-2 p-1 bg-retro-danger text-white hover:scale-110 transition-transform"
-                  >
-                    <X size={16} />
-                  </button>
-                  <div className="absolute bottom-0 inset-x-0 bg-black/80 px-2 py-1 text-[10px] font-mono truncate text-white">
-                    {file.name}
+              {files.map((file, idx) => {
+                const isPreviewable = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type);
+                return (
+                  <div key={idx} className="relative group aspect-square border-2 border-retro-border overflow-hidden p-1 bg-retro-bg flex flex-col items-center justify-center">
+                    {isPreviewable ? (
+                      <img
+                        src={URL.createObjectURL(file)}
+                        alt="preview"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex flex-col items-center justify-center h-full w-full bg-retro-panel p-2">
+                        <UploadIcon size={24} className="text-retro-muted mb-2" />
+                        <span className="text-[10px] font-mono text-retro-text break-all text-center leading-tight">
+                          {file.name}
+                        </span>
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => removeFile(idx)}
+                      className="absolute top-2 right-2 p-1 bg-retro-danger text-white hover:scale-110 transition-transform z-10"
+                    >
+                      <X size={16} />
+                    </button>
+                    {isPreviewable && (
+                      <div className="absolute bottom-0 inset-x-0 bg-black/80 px-2 py-1 text-[10px] font-mono truncate text-white">
+                        {file.name}
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
 
           <div className="pt-6 border-t-2 border-retro-border">
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               className="w-full"
               disabled={isLoading || !selectedCourse}
             >

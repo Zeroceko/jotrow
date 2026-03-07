@@ -6,7 +6,8 @@ from app.db.base_class import Base
 class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True)
-    username = Column(String, unique=True, index=True)
+    username = Column(String, unique=True, index=True, nullable=True)
+    email = Column(String, unique=True, index=True, nullable=True) # Making nullable for existing, but mandatory for new
     hashed_password = Column(String)
     share_code = Column(String(4)) # 4 haneli kod
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
