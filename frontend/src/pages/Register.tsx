@@ -4,7 +4,7 @@ import api from '../services/api';
 import { Card } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
-import { Copy, Check } from 'lucide-react';
+import { Copy, Check, Loader2 } from 'lucide-react';
 
 const Register: React.FC = () => {
   const [username, setUsername] = useState('');
@@ -13,7 +13,7 @@ const Register: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [shareCode, setShareCode] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  
+
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -50,21 +50,21 @@ const Register: React.FC = () => {
             <h2 className="text-3xl font-bold uppercase tracking-tight mb-2 text-retro-accent">SUCCESS!</h2>
             <p className="text-retro-text font-mono">Your account has been created.</p>
           </div>
-          
+
           <div className="bg-retro-bg border-2 border-retro-border p-6 mb-8 text-center relative group">
             <p className="text-retro-muted font-mono text-sm mb-4 uppercase tracking-widest">Your Secret Share Code</p>
             <div className="text-5xl font-mono font-bold tracking-widest text-white">
               {shareCode}
             </div>
-            
-            <button 
+
+            <button
               onClick={copyToClipboard}
               className="absolute top-2 right-2 p-2 text-retro-muted hover:text-retro-accent transition-colors mix-blend-difference"
               title="Copy code"
             >
               {copied ? <Check size={20} className="text-retro-accent" /> : <Copy size={20} />}
             </button>
-            
+
             <div className="mt-4 pt-4 border-t-2 border-retro-border border-dashed text-xs text-retro-muted text-left font-mono">
               ⚠️ SAVE THIS CODE. Anyone with this code can view your public profile at /u/{username}
             </div>
@@ -111,13 +111,14 @@ const Register: React.FC = () => {
             required
             minLength={6}
           />
-          
-          <Button 
-            type="submit" 
-            className="w-full mt-4" 
+
+          <Button
+            type="submit"
+            className="w-full mt-4 flex justify-center items-center gap-2"
             disabled={isLoading}
           >
-            {isLoading ? 'PROCESSING...' : 'INITIALIZE_'}
+            {isLoading && <Loader2 className="animate-spin" size={18} />}
+            {isLoading ? 'REGISTERING...' : 'REGISTER_'}
           </Button>
         </form>
 

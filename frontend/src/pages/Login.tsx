@@ -5,13 +5,14 @@ import api from '../services/api';
 import { Card } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
+import { Loader2 } from 'lucide-react';
 
 const Login: React.FC = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  
+
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -27,10 +28,10 @@ const Login: React.FC = () => {
 
       const response = await api.post('/auth/login', formData, {
         headers: {
-            'Content-Type': 'application/x-www-form-urlencoded'
+          'Content-Type': 'application/x-www-form-urlencoded'
         }
       });
-      
+
       login(response.data.access_token);
       navigate('/');
     } catch (err: any) {
@@ -71,12 +72,13 @@ const Login: React.FC = () => {
             onChange={(e) => setPassword(e.target.value)}
             required
           />
-          
-          <Button 
-            type="submit" 
-            className="w-full mt-4" 
+
+          <Button
+            type="submit"
+            className="w-full mt-4 flex justify-center items-center gap-2"
             disabled={isLoading}
           >
+            {isLoading && <Loader2 className="animate-spin" size={18} />}
             {isLoading ? 'AUTHENTICATING...' : 'LOGIN_'}
           </Button>
         </form>
