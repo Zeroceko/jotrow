@@ -6,7 +6,7 @@ import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
 import {
   Lock, Unlock, Loader2, BookOpen, ChevronDown, ChevronUp,
-  ImageIcon, X, ChevronLeft, ChevronRight, ZoomIn, Bookmark
+  X, ChevronLeft, ChevronRight, ZoomIn, Bookmark
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useAuth } from '../context/AuthContext';
@@ -27,9 +27,6 @@ interface Course {
   note_count: number;
 }
 
-interface NoteImage {
-  url: string;
-}
 
 interface Note {
   id: number;
@@ -163,7 +160,7 @@ const Profile: React.FC<ProfileProps> = ({ isPublic = false }) => {
     setSaveModalOpen(true);
     if (userCourses.length === 0 && isAuthenticated) {
       try {
-        const res = await api.get('/api/courses'); 
+        const res = await api.get('/api/courses');
         setUserCourses(res.data);
         if (res.data.length > 0) setSelectedCourseId(res.data[0].id);
       } catch (err) {
@@ -179,7 +176,7 @@ const Profile: React.FC<ProfileProps> = ({ isPublic = false }) => {
       await api.post(`/api/sharing/notes/${noteToSave}/save`, { course_id: Number(selectedCourseId) });
       setSaveModalOpen(false);
       setNoteToSave(null);
-      alert("Note saved successfully!"); 
+      alert("Note saved successfully!");
     } catch (err) {
       console.error("Failed to save note", err);
       alert("Failed to save note.");
@@ -478,7 +475,7 @@ const Profile: React.FC<ProfileProps> = ({ isPublic = false }) => {
               <X size={24} />
             </button>
             <h2 className="text-2xl font-bold uppercase tracking-tight mb-6">Save Note_</h2>
-            
+
             {userCourses.length === 0 ? (
               <div className="text-retro-muted font-mono text-center py-4">
                 You don't have any courses to save this note to.
@@ -506,16 +503,16 @@ const Profile: React.FC<ProfileProps> = ({ isPublic = false }) => {
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="flex justify-end gap-3 pt-4">
-                  <Button 
-                    variant="ghost" 
+                  <Button
+                    variant="ghost"
                     onClick={() => setSaveModalOpen(false)}
                     disabled={isSaving}
                   >
                     CANCEL
                   </Button>
-                  <Button 
+                  <Button
                     onClick={handleSaveNote}
                     disabled={isSaving || !selectedCourseId}
                     className="flex items-center gap-2"

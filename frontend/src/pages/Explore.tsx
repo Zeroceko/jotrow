@@ -68,7 +68,7 @@ const Explore: React.FC = () => {
               <span>{user.course_count} Course{user.course_count !== 1 && 's'}</span>
             </div>
           </div>
-          <Button variant="outline" size="sm" className="hidden md:block">VIEW_</Button>
+          <Button variant="secondary" className="hidden md:block">VIEW_</Button>
         </div>
       </Card>
     </div>
@@ -88,12 +88,12 @@ const Explore: React.FC = () => {
       <div className="bg-retro-bg border-4 border-retro-border p-4 shadow-solid">
         <form onSubmit={handleSearch} className="flex gap-4 items-end">
           <div className="flex-1">
-             <Input
-                label="SEARCH PROFILES"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Enter username (e.g. testuser)..."
-              />
+            <Input
+              label="SEARCH PROFILES"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Enter username (e.g. testuser)..."
+            />
           </div>
           <Button type="submit" disabled={isLoading} className="mb-1 h-[52px]">
             {isLoading ? 'SEARCHING...' : <><Search size={20} /> SEARCH_</>}
@@ -109,25 +109,25 @@ const Explore: React.FC = () => {
 
       <div>
         <h2 className="text-2xl font-bold uppercase tracking-tighter mb-6 flex items-center gap-2">
-           {searchResults !== null ? 'Search Results' : 'Featured Profiles'}
+          {searchResults !== null ? 'Search Results' : 'Featured Profiles'}
         </h2>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {searchResults !== null ? (
             searchResults.length > 0 ? (
-               searchResults.map(user => <UserCard key={user.username} user={user} />)
+              searchResults.map(user => <UserCard key={user.username} user={user} />)
             ) : (
-                <div className="col-span-full py-12 text-center border-2 border-dashed border-retro-border">
-                  <p className="text-retro-muted font-mono">No profiles found matching "{query}".</p>
-                </div>
+              <div className="col-span-full py-12 text-center border-2 border-dashed border-retro-border">
+                <p className="text-retro-muted font-mono">No profiles found matching "{query}".</p>
+              </div>
             )
           ) : (
             featuredUsers.length > 0 ? (
-                featuredUsers.map(user => <UserCard key={user.username} user={user} />)
+              featuredUsers.map(user => <UserCard key={user.username} user={user} />)
             ) : (
-               <div className="col-span-full py-12 text-center border-2 border-dashed border-retro-border">
-                  <p className="text-retro-muted font-mono">No public profiles available yet.</p>
-                </div>
+              <div className="col-span-full py-12 text-center border-2 border-dashed border-retro-border">
+                <p className="text-retro-muted font-mono">No public profiles available yet.</p>
+              </div>
             )
           )}
         </div>
