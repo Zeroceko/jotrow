@@ -78,7 +78,6 @@ const Upload: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedCourse || !title) return;
     if (!title) return;
 
     setError('');
@@ -96,9 +95,7 @@ const Upload: React.FC = () => {
         formData.append('files', file);
       });
 
-      await api.post('/api/notes', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
+      await api.post('/api/notes', formData);
 
       if (selectedCourse) {
         navigate(`/course/${selectedCourse}`);

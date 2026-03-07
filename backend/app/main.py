@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .api import auth, notes, sharing
+from .api import auth, notes, sharing, settings
 
 app = FastAPI(title="JOTROW API")
 
@@ -17,6 +17,7 @@ app.add_middleware(
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(notes.router, prefix="/api", tags=["notes"])
 app.include_router(sharing.router, prefix="/api/sharing", tags=["sharing"])
+app.include_router(settings.router, prefix="/api/settings", tags=["settings"])
 
 @app.get("/")
 async def root():

@@ -16,8 +16,12 @@ router = APIRouter()
 
 class PublicUserResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-    
+
     username: str
+    display_name: Optional[str] = None
+    bio: Optional[str] = None
+    university: Optional[str] = None
+    department: Optional[str] = None
     course_count: int = 0
 
 class VerifyCodeRequest(BaseModel):
@@ -37,18 +41,28 @@ def search_users(
     db: Session = Depends(deps.get_db)
 ) -> Any:
     """
-    Search for public profiles by username.
+    Search for public profiles by username or display name.
     """
     users = db.query(
         models.User,
         func.count(models.Course.id).label('course_count')
     ).outerjoin(models.Course, models.User.id == models.Course.owner_id)\
-     .filter(models.User.username.ilike(f"%{q}%"))\
+     .filter(
+        models.User.username.ilike(f"%{q}%") |
+        models.User.display_name.ilike(f"%{q}%")
+     )\
      .group_by(models.User.id)\
      .order_by(models.User.username)\
      .limit(limit).all()
-     
-    return [{"username": u.username, "course_count": c} for u, c in users]
+
+    return [{
+        "username": u.username,
+        "display_name": u.display_name,
+        "bio": u.bio,
+        "university": u.university,
+        "department": u.department,
+        "course_count": c,
+    } for u, c in users]
 
 @router.get("/featured", response_model=List[PublicUserResponse])
 def get_featured_users(
@@ -62,23 +76,44 @@ def get_featured_users(
         models.User,
         func.count(models.Course.id).label('course_count')
     ).outerjoin(models.Course, models.User.id == models.Course.owner_id)\
+     .filter(models.User.show_on_explore == True)\
      .group_by(models.User.id)\
      .order_by(func.count(models.Course.id).desc())\
      .limit(limit).all()
-     
-    return [{"username": u.username, "course_count": c} for u, c in users]
+
+    return [{
+        "username": u.username,
+        "display_name": u.display_name,
+        "bio": u.bio,
+        "university": u.university,
+        "department": u.department,
+        "course_count": c,
+    } for u, c in users]
 
 @router.get("/{username}")
 def get_public_profile(username: str, db: Session = Depends(deps.get_db)) -> Any:
     """
-    Check if a public profile exists. 
+    Check if a public profile exists and return its public metadata.
     Frontend will use this to show the code entry screen.
     """
     user = db.query(models.User).filter(models.User.username == username).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-        
-    return {"username": user.username, "message": "Enter 4-digit code to access"}
+
+    note_count = db.query(func.count(models.Note.id))\
+        .join(models.Course, models.Note.course_id == models.Course.id)\
+        .filter(models.Course.owner_id == user.id)\
+        .scalar() or 0
+
+    return {
+        "username": user.username,
+        "display_name": user.display_name,
+        "bio": user.bio,
+        "university": user.university,
+        "department": user.department,
+        "note_count": note_count,
+        "message": "Enter 4-digit code to access",
+    }
 
 @router.post("/{username}/verify", response_model=VerifyResponse)
 def verify_share_code(

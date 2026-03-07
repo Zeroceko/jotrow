@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LogOut, BookText, PlusCircle } from 'lucide-react';
+import { LogOut, BookText, PlusCircle, Settings } from 'lucide-react';
 import { Button } from './ui/Button';
 
 export const Navbar: React.FC = () => {
@@ -44,6 +44,9 @@ export const Navbar: React.FC = () => {
               <>
                 <Link to="/explore" className="text-retro-muted hover:text-retro-text font-medium transition-colors mr-2">
                   EXPLORE
+                </Link>
+                <Link to="/settings" className="text-retro-muted hover:text-retro-text transition-colors">
+                  <Settings size={18} />
                 </Link>
                 <Button variant="ghost" onClick={handleUploadClick} className="flex gap-2 items-center">
                   <PlusCircle size={18} />

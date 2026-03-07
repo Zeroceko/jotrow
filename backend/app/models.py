@@ -7,12 +7,26 @@ class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String, unique=True, index=True, nullable=True)
-    email = Column(String, unique=True, index=True, nullable=True) # Making nullable for existing, but mandatory for new
+    email = Column(String, unique=True, index=True, nullable=True)
     hashed_password = Column(String)
-    share_code = Column(String(4)) # 4 haneli kod
+    share_code = Column(String(4))
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
+    # Profile
+    display_name = Column(String, nullable=True)
+    bio = Column(Text, nullable=True)
+    university = Column(String, nullable=True)
+    department = Column(String, nullable=True)
+
+    # Privacy
+    note_default_visibility = Column(String, default="private")  # "private" | "public"
+    show_on_explore = Column(Boolean, default=True)
+
+    # Wallet
+    paps_balance = Column(Integer, default=0)
+
     courses = relationship("Course", back_populates="owner")
+    transactions = relationship("Transaction", back_populates="user")
 
 class Course(Base):
     __tablename__ = "courses"
@@ -33,6 +47,7 @@ class Note(Base):
     course_id = Column(Integer, ForeignKey("courses.id"), nullable=True)
     praise_count = Column(Integer, default=0)
     original_author = Column(String, nullable=True)
+    visibility = Column(String, default="private")  # "private" | "public"
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     course = relationship("Course", back_populates="notes")
@@ -46,3 +61,14 @@ class NoteImage(Base):
     minio_key = Column(String)
 
     note = relationship("Note", back_populates="images")
+
+class Transaction(Base):
+    __tablename__ = "transactions"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    type = Column(String, nullable=False)  # "topup" | "purchase" | "sale" | "fee" | "refund"
+    amount = Column(Integer, nullable=False)  # PAPS; positive = credit, negative = debit
+    description = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    user = relationship("User", back_populates="transactions")

@@ -10,10 +10,10 @@ Web tabanlı ders notu paylaşım platformu. Kullanıcılar ders bazlı notları
 notlar-burada/
 ├── backend/              # FastAPI + SQLAlchemy + PostgreSQL
 │   ├── app/
-│   │   ├── api/          # Endpoint router'ları (auth, notes, sharing, deps)
+│   │   ├── api/          # Endpoint router'ları (auth, notes, sharing, settings, deps)
 │   │   ├── core/         # Config + güvenlik (JWT, bcrypt)
 │   │   ├── db/           # SQLAlchemy session + base
-│   │   ├── models.py     # User, Course, Note, NoteImage
+│   │   ├── models.py     # User, Course, Note, NoteImage, Transaction
 │   │   └── services/     # MinIO dosya yükleme/silme servisi
 │   ├── alembic/          # DB migration'ları
 │   ├── alembic.ini
@@ -47,7 +47,12 @@ notlar-burada/
 | `/api/notes/{id}` | DELETE | Notu + MinIO görsellerini sil | ✅ |
 | `/u/{username}` | GET | Herkese açık profil kontrolü | ✅ |
 | `/u/{username}/verify` | POST | 4 haneli kod doğrulama + misafir token | ✅ |
-
+| `/api/settings/me` | GET | Kullanıcı ayarlarını (profil, cüzdan, gizlilik) getir | ✅ |
+| `/api/settings/profile` | PUT | İsim, biyografi, üniversite, bölüm güncelle | ✅ |
+| `/api/settings/profile/pin` | PUT | 4 haneli PIN kodunu (share_code) değiştir | ✅ |
+| `/api/settings/privacy` | PUT | Varsayılan gizlilik ve keşfet ayarlarını güncelle | ✅ |
+| `/api/settings/wallet` | GET | PAPS bakiyesi ve işlem geçmişini listele | ✅ |
+| `/api/settings/earnings` | GET | Haftalık kazanç/harcama özeti | ✅ |
 ### Frontend
 | Sayfa/Özellik | Durum |
 |---------------|-------|
@@ -64,6 +69,9 @@ notlar-burada/
 | Profil — kurs kartına tıklanınca notlar açılıyor (collapse panel) | ✅ |
 | Profil — misafir token ile not görüntüleme | ✅ |
 | Profil — not görsellerinde lightbox | ✅ |
+| Ayarlar (Settings) — Profil, Gizlilik, Cüzdan, Hesap sekmeleri | ✅ |
+| PAPS Sistemi — Bakiye takibi ve işlem geçmişi | ✅ |
+| Özel PIN Belirleme — Kullanıcının kendi 4 haneli kodunu set etmesi | ✅ |
 
 ---
 
@@ -147,15 +155,22 @@ docker-compose up --build
 - [x] Keşfet Sayfası (Kullanıcı arama, en çok kursu olanlar listesi)
 - [x] Notlara "Övgü (Praise)" özelliği (Animasyonlu UI ve Backend)
 - [x] Başkasının notunu kendi kursuna kopyalama ("Save Note")
+- [x] **Settings Sayfası:** Profil, Gizlilik, Cüzdan (PAPS), Kazançlar ve Hesap sekmeleri.
+- [x] **Cüzdan (PAPS) Sistemi:** Bakiye yönetimi ve işlem geçmişi (Transaction History).
+- [x] **Özel PIN (Share Code):** Kullanıcının kendi 4 haneli kodunu belirleyebilmesi.
+- [x] **Görsel Yükleme Fix:** FormData ve Axios boundary hataları giderildi, "Add to Library" (kurs seçmeden upload) düzeltildi.
 - [x] Backend çalışır durumda + E2E testleri başarılı.
 
 ### 🔲 Sonraki Developer İçin Yapılacaklar
 
 #### Orta Öncelik
-- [ ] **Share code yenileme:** Kullanıcı kendi `share_code`'unu yenileyebilmeli. `POST /auth/reset-share-code` endpoint'i + UI gerekli.
+- [ ] **Avatar Yükleme:** Kullanıcı profil fotoğrafı yükleyebilmeli (MinIO entegrasyonu hazır, sadece endpoint ve UI eklenmeli).
+- [ ] **Klasör Bazlı Gizlilik:** Şu an gizlilik not bazlı. Kurs (folder) bazlı gizlilik ayarı eklenebilir.
 - [ ] **Frontend Pagination UI:** Backend limit/offset eklendi ancak Frontend hala 100 kaydı birden çekiyor ("Load More" butonu eklenebilir).
 
 #### Düşük Öncelik / Production'a Geçiş
+- [ ] **PAPS Payout:** Kullanıcının kazandığı PAPS birimlerini gerçek paraya dönüştürme mantığı.
+- [ ] **Hesap Silme:** Phase 2 kapsamında hesap kapatma fonksiyonu.
 - [ ] **Üretim ortamı:** `SECRET_KEY` ve MinIO credential'ları `.env`'den production secret'larına taşınmalı.
 - [ ] **CORS kısıtlama:** `app/main.py`'de `allow_origins=["*"]` production'da spesifik domainlerle kısıtlanmalı.
 - [ ] **Görsel optimizasyon:** Upload sırasında client-side resize (ör. 1920px max) eklenebilir. Büyük görseller MinIO'da yer ve presigned URL süresi sorununa neden olabilir.
@@ -207,10 +222,11 @@ React 18, Vite, Tailwind CSS, Axios, React Router v6, Lucide React, date-fns
 ## 🗄 Veritabanı Şeması
 
 ```
-users          → id, username, hashed_password, share_code, created_at
+users          → id, username, email, hashed_password, share_code, display_name, bio, university, department, note_default_visibility, show_on_explore, paps_balance, created_at
 courses        → id, title, description, owner_id (FK: users), created_at
-notes          → id, title, content, course_id (FK: courses), created_at
+notes          → id, title, content, course_id (FK: courses), praise_count, original_author, visibility, created_at
 note_images    → id, note_id (FK: notes), image_url, minio_key
+transactions   → id, user_id (FK: users), type, amount, description, created_at
 ```
 
 > **Cascade silme:** SQLAlchemy model'de `cascade="all, delete-orphan"` tanımlıysa DB level cascade çalışır. Değilse backend kod içinde manuel silme yapıyor (`notes.py`). Modeli kontrol et.

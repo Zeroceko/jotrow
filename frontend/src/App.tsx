@@ -8,6 +8,7 @@ import Upload from './pages/Upload';
 import Profile from './pages/Profile';
 import Explore from './pages/Explore';
 import Home from './pages/Home';
+import Settings from './pages/Settings';
 import './index.css';
 
 import CourseDetail from './pages/CourseDetail';
@@ -45,6 +46,11 @@ function App() {
               <Route path="/explore" element={<Explore />} />
               <Route path="/upload" element={<Upload />} />
               <Route path="/profile" element={<Profile />} />
+              <Route path="/settings" element={
+                <ProtectedRoute>
+                  <Settings />
+                </ProtectedRoute>
+              } />
               <Route path="/u/:username" element={<Profile isPublic={true} />} />
               <Route path="*" element={<NotFound />} />
             </Routes>

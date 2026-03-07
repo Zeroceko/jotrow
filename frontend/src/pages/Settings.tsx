@@ -1,0 +1,597 @@
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import api from '../services/api';
+import { Card } from '../components/ui/Card';
+import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
+import { useAuth } from '../context/AuthContext';
+import {
+    User, ShieldCheck, Wallet, TrendingUp, Settings2,
+    Loader2, Check, AlertCircle, LogOut, Lock
+} from 'lucide-react';
+
+// ── Types ──────────────────────────────────────────────────────────────────
+
+type Tab = 'profile' | 'privacy' | 'wallet' | 'earnings' | 'account';
+
+interface UserSettings {
+    id: number;
+    username: string;
+    email: string;
+    share_code: string;
+    display_name: string | null;
+    bio: string | null;
+    university: string | null;
+    department: string | null;
+    note_default_visibility: string;
+    show_on_explore: boolean;
+    paps_balance: number;
+}
+
+interface Transaction {
+    id: number;
+    type: string;
+    amount: number;
+    description: string | null;
+    created_at: string;
+}
+
+interface WalletData {
+    balance: number;
+    transactions: Transaction[];
+}
+
+interface EarningsData {
+    earned: number;
+    spent: number;
+    net: number;
+    week_start: string;
+    week_end: string;
+}
+
+// ── Helper components ───────────────────────────────────────────────────────
+
+const StatusMessage: React.FC<{ msg: string; type: 'success' | 'error' }> = ({ msg, type }) => (
+    <div className={`flex items-center gap-2 p-3 border-2 font-mono text-sm ${type === 'success'
+        ? 'bg-retro-accent/10 border-retro-accent text-retro-accent'
+        : 'bg-retro-danger/10 border-retro-danger text-retro-danger'
+        }`}>
+        {type === 'success' ? <Check size={14} /> : <AlertCircle size={14} />}
+        {msg}
+    </div>
+);
+
+const SectionTitle: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+    <h2 className="text-xs font-bold text-retro-muted tracking-widest uppercase mb-6 pb-2 border-b-2 border-retro-border">
+        {children}
+    </h2>
+);
+
+const typeColor: Record<string, string> = {
+    sale: 'text-retro-accent',
+    topup: 'text-retro-accent',
+    purchase: 'text-retro-danger',
+    fee: 'text-retro-danger',
+    refund: 'text-yellow-400',
+};
+
+// ── Main Component ───────────────────────────────────────────────────────────
+
+const Settings: React.FC = () => {
+    const { logout } = useAuth();
+    const navigate = useNavigate();
+    const [activeTab, setActiveTab] = useState<Tab>('profile');
+    const [settings, setSettings] = useState<UserSettings | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+
+    // Wallet / earnings data
+    const [walletData, setWalletData] = useState<WalletData | null>(null);
+    const [earningsData, setEarningsData] = useState<EarningsData | null>(null);
+
+    // Profile form state
+    const [displayName, setDisplayName] = useState('');
+    const [bio, setBio] = useState('');
+    const [university, setUniversity] = useState('');
+    const [department, setDepartment] = useState('');
+    const [profileMsg, setProfileMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+    const [profileLoading, setProfileLoading] = useState(false);
+
+    // PIN form state
+    const [pin, setPin] = useState('');
+    const [pinMsg, setPinMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+    const [pinLoading, setPinLoading] = useState(false);
+
+    // Privacy form state
+    const [defaultVisibility, setDefaultVisibility] = useState<'private' | 'public'>('private');
+    const [showOnExplore, setShowOnExplore] = useState(true);
+    const [privacyMsg, setPrivacyMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+    const [privacyLoading, setPrivacyLoading] = useState(false);
+
+    // Account form state
+    const [newEmail, setNewEmail] = useState('');
+    const [emailPassword, setEmailPassword] = useState('');
+    const [emailMsg, setEmailMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+    const [emailLoading, setEmailLoading] = useState(false);
+
+    const [currentPassword, setCurrentPassword] = useState('');
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [passwordMsg, setPasswordMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+    const [passwordLoading, setPasswordLoading] = useState(false);
+
+    useEffect(() => {
+        const fetchSettings = async () => {
+            try {
+                const res = await api.get('/api/settings/me');
+                const data: UserSettings = res.data;
+                setSettings(data);
+                setDisplayName(data.display_name || '');
+                setBio(data.bio || '');
+                setUniversity(data.university || '');
+                setDepartment(data.department || '');
+                setPin(data.share_code || '');
+                setDefaultVisibility((data.note_default_visibility as 'private' | 'public') || 'private');
+                setShowOnExplore(data.show_on_explore ?? true);
+            } catch {
+                // not logged in or error
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchSettings();
+    }, []);
+
+    useEffect(() => {
+        if (activeTab === 'wallet' && !walletData) {
+            api.get('/api/settings/wallet').then(res => setWalletData(res.data)).catch(() => { });
+        }
+        if (activeTab === 'earnings' && !earningsData) {
+            api.get('/api/settings/earnings').then(res => setEarningsData(res.data)).catch(() => { });
+        }
+    }, [activeTab]);
+
+    const handleSaveProfile = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setProfileLoading(true);
+        setProfileMsg(null);
+        try {
+            await api.put('/api/settings/profile', { display_name: displayName, bio, university, department });
+            setProfileMsg({ text: 'Profile updated successfully.', type: 'success' });
+            setSettings(prev => prev ? { ...prev, display_name: displayName, bio, university, department } : prev);
+        } catch (err: any) {
+            setProfileMsg({ text: err.response?.data?.detail || 'Update failed.', type: 'error' });
+        } finally {
+            setProfileLoading(false);
+        }
+    };
+
+    const handleSavePin = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setPinLoading(true);
+        setPinMsg(null);
+        try {
+            await api.put('/api/settings/profile/pin', { pin });
+            setPinMsg({ text: 'PIN updated successfully.', type: 'success' });
+            setSettings(prev => prev ? { ...prev, share_code: pin } : prev);
+        } catch (err: any) {
+            setPinMsg({ text: err.response?.data?.detail || 'PIN update failed.', type: 'error' });
+        } finally {
+            setPinLoading(false);
+        }
+    };
+
+    const handleSavePrivacy = async () => {
+        setPrivacyLoading(true);
+        setPrivacyMsg(null);
+        try {
+            await api.put('/api/settings/privacy', { note_default_visibility: defaultVisibility, show_on_explore: showOnExplore });
+            setPrivacyMsg({ text: 'Privacy settings saved.', type: 'success' });
+        } catch (err: any) {
+            setPrivacyMsg({ text: err.response?.data?.detail || 'Update failed.', type: 'error' });
+        } finally {
+            setPrivacyLoading(false);
+        }
+    };
+
+    const handleChangeEmail = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setEmailLoading(true);
+        setEmailMsg(null);
+        try {
+            await api.put('/api/settings/account/email', { new_email: newEmail, current_password: emailPassword });
+            setEmailMsg({ text: 'Email updated. You may need to re-login.', type: 'success' });
+            setNewEmail('');
+            setEmailPassword('');
+        } catch (err: any) {
+            setEmailMsg({ text: err.response?.data?.detail || 'Email update failed.', type: 'error' });
+        } finally {
+            setEmailLoading(false);
+        }
+    };
+
+    const handleChangePassword = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (newPassword !== confirmPassword) {
+            setPasswordMsg({ text: 'New passwords do not match.', type: 'error' });
+            return;
+        }
+        setPasswordLoading(true);
+        setPasswordMsg(null);
+        try {
+            await api.put('/api/settings/account/password', { current_password: currentPassword, new_password: newPassword });
+            setPasswordMsg({ text: 'Password updated successfully.', type: 'success' });
+            setCurrentPassword('');
+            setNewPassword('');
+            setConfirmPassword('');
+        } catch (err: any) {
+            setPasswordMsg({ text: err.response?.data?.detail || 'Password update failed.', type: 'error' });
+        } finally {
+            setPasswordLoading(false);
+        }
+    };
+
+    const handleLogout = () => {
+        logout();
+        navigate('/');
+    };
+
+    const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
+        { id: 'profile', label: 'Profile', icon: <User size={16} /> },
+        { id: 'privacy', label: 'Privacy', icon: <ShieldCheck size={16} /> },
+        { id: 'wallet', label: 'Wallet', icon: <Wallet size={16} /> },
+        { id: 'earnings', label: 'Earnings', icon: <TrendingUp size={16} /> },
+        { id: 'account', label: 'Account', icon: <Settings2 size={16} /> },
+    ];
+
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center min-h-[60vh]">
+                <Loader2 className="animate-spin text-retro-accent" size={32} />
+            </div>
+        );
+    }
+
+    return (
+        <div className="p-4 md:p-8 max-w-6xl mx-auto animate-in fade-in duration-300">
+            <div className="mb-8">
+                <h1 className="text-4xl font-bold uppercase tracking-tighter">
+                    Settings<span className="text-retro-accent">_</span>
+                </h1>
+                {settings && (
+                    <p className="text-retro-muted font-mono text-sm mt-1">
+                        @{settings.username} · {settings.email}
+                    </p>
+                )}
+            </div>
+
+            <div className="flex flex-col md:flex-row gap-6">
+                {/* Sidebar */}
+                <nav className="md:w-48 flex-shrink-0">
+                    <ul className="flex md:flex-col gap-1 overflow-x-auto md:overflow-x-visible pb-2 md:pb-0">
+                        {tabs.map(tab => (
+                            <li key={tab.id} className="flex-shrink-0">
+                                <button
+                                    onClick={() => setActiveTab(tab.id)}
+                                    className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-bold font-mono uppercase tracking-wider transition-all border-2 ${activeTab === tab.id
+                                        ? 'bg-retro-accent text-retro-bg border-retro-accent'
+                                        : 'border-transparent text-retro-muted hover:text-retro-text hover:border-retro-border'
+                                        }`}
+                                >
+                                    {tab.icon}
+                                    <span className="hidden sm:inline">{tab.label}</span>
+                                </button>
+                            </li>
+                        ))}
+                    </ul>
+                </nav>
+
+                {/* Content */}
+                <div className="flex-1 min-w-0">
+
+                    {/* ── Profile Tab ── */}
+                    {activeTab === 'profile' && (
+                        <div className="space-y-6">
+                            <Card>
+                                <SectionTitle>Public Profile</SectionTitle>
+                                <form onSubmit={handleSaveProfile} className="space-y-5">
+                                    <Input
+                                        label="Display Name"
+                                        value={displayName}
+                                        onChange={e => setDisplayName(e.target.value)}
+                                        placeholder="Your full name or alias"
+                                    />
+                                    <div className="flex flex-col w-full">
+                                        <label className="mb-2 text-sm font-bold text-retro-muted tracking-widest uppercase">Bio</label>
+                                        <textarea
+                                            className="bg-retro-bg text-retro-text border-2 border-retro-border py-3 px-4 font-mono outline-none focus:border-retro-accent min-h-[100px] resize-y"
+                                            value={bio}
+                                            onChange={e => setBio(e.target.value)}
+                                            placeholder="A short description about you..."
+                                            maxLength={280}
+                                        />
+                                        <span className="text-right text-xs text-retro-muted font-mono mt-1">{bio.length}/280</span>
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <Input
+                                            label="University"
+                                            value={university}
+                                            onChange={e => setUniversity(e.target.value)}
+                                            placeholder="e.g. MIT"
+                                        />
+                                        <Input
+                                            label="Department"
+                                            value={department}
+                                            onChange={e => setDepartment(e.target.value)}
+                                            placeholder="e.g. Computer Science"
+                                        />
+                                    </div>
+                                    {profileMsg && <StatusMessage msg={profileMsg.text} type={profileMsg.type} />}
+                                    <Button type="submit" disabled={profileLoading} className="w-full sm:w-auto">
+                                        {profileLoading ? <><Loader2 size={14} className="animate-spin inline mr-2" />SAVING...</> : 'SAVE PROFILE_'}
+                                    </Button>
+                                </form>
+                            </Card>
+
+                            <Card>
+                                <SectionTitle>Share PIN (4-digit Code)</SectionTitle>
+                                <p className="text-retro-muted font-mono text-sm mb-5">
+                                    Your PIN is what others enter to access your public profile at{' '}
+                                    <span className="text-retro-text">/u/{settings?.username}</span>.
+                                    {settings?.share_code && (
+                                        <span className="ml-2 inline-flex items-center gap-1">
+                                            Current: <span className="text-retro-accent font-bold tracking-widest">{settings.share_code}</span>
+                                        </span>
+                                    )}
+                                </p>
+                                <form onSubmit={handleSavePin} className="flex flex-col sm:flex-row gap-4 items-start">
+                                    <div className="w-full sm:w-40">
+                                        <Input
+                                            label="New PIN"
+                                            value={pin}
+                                            onChange={e => setPin(e.target.value.slice(0, 4).toUpperCase())}
+                                            maxLength={4}
+                                            placeholder="XXXX"
+                                            className="text-center text-2xl tracking-widest font-bold"
+                                        />
+                                    </div>
+                                    <div className="pt-7">
+                                        <Button type="submit" disabled={pinLoading || pin.length !== 4}>
+                                            {pinLoading ? <Loader2 size={14} className="animate-spin inline mr-2" /> : <Lock size={14} className="inline mr-2" />}
+                                            SET PIN_
+                                        </Button>
+                                    </div>
+                                </form>
+                                {pinMsg && <div className="mt-4"><StatusMessage msg={pinMsg.text} type={pinMsg.type} /></div>}
+                            </Card>
+                        </div>
+                    )}
+
+                    {/* ── Privacy Tab ── */}
+                    {activeTab === 'privacy' && (
+                        <Card>
+                            <SectionTitle>Privacy & Visibility</SectionTitle>
+                            <div className="space-y-8">
+                                <div>
+                                    <label className="text-sm font-bold text-retro-muted tracking-widest uppercase block mb-3">
+                                        Default Note Visibility
+                                    </label>
+                                    <div className="flex gap-3">
+                                        {(['private', 'public'] as const).map(v => (
+                                            <button
+                                                key={v}
+                                                onClick={() => setDefaultVisibility(v)}
+                                                className={`flex-1 py-4 font-bold font-mono uppercase text-sm border-2 transition-all ${defaultVisibility === v
+                                                    ? 'bg-retro-accent text-retro-bg border-retro-accent shadow-solid'
+                                                    : 'border-retro-border text-retro-muted hover:border-retro-text hover:text-retro-text'
+                                                    }`}
+                                            >
+                                                {v === 'private' ? '🔒 Private' : '🌐 Public'}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <p className="text-retro-muted font-mono text-xs mt-3">
+                                        {defaultVisibility === 'private'
+                                            ? 'New notes will only be visible to you and users with your PIN.'
+                                            : 'New notes will be publicly visible and discoverable.'}
+                                    </p>
+                                </div>
+
+                                <div className="border-t-2 border-retro-border pt-6">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <label className="text-sm font-bold text-retro-muted tracking-widest uppercase block mb-1">
+                                                Show on Explore
+                                            </label>
+                                            <p className="text-retro-muted font-mono text-xs">
+                                                Allow your profile to appear in the Explore / Featured section.
+                                            </p>
+                                        </div>
+                                        <button
+                                            onClick={() => setShowOnExplore(v => !v)}
+                                            className={`relative w-14 h-7 border-2 transition-all flex-shrink-0 ${showOnExplore ? 'bg-retro-accent border-retro-accent' : 'bg-retro-bg border-retro-border'
+                                                }`}
+                                        >
+                                            <span className={`absolute top-0.5 w-5 h-5 bg-retro-bg transition-all ${showOnExplore ? 'left-7 bg-retro-bg' : 'left-0.5'
+                                                }`} />
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {privacyMsg && <StatusMessage msg={privacyMsg.text} type={privacyMsg.type} />}
+                                <Button onClick={handleSavePrivacy} disabled={privacyLoading} className="w-full sm:w-auto">
+                                    {privacyLoading ? <><Loader2 size={14} className="animate-spin inline mr-2" />SAVING...</> : 'SAVE PRIVACY_'}
+                                </Button>
+                            </div>
+                        </Card>
+                    )}
+
+                    {/* ── Wallet Tab ── */}
+                    {activeTab === 'wallet' && (
+                        <div className="space-y-6">
+                            <Card>
+                                <SectionTitle>PAPS Balance</SectionTitle>
+                                <div className="flex items-end gap-4">
+                                    <div>
+                                        <div className="text-retro-muted font-mono text-xs uppercase tracking-wider mb-1">Available</div>
+                                        <div className="text-5xl font-bold text-retro-accent font-mono">
+                                            {walletData?.balance ?? settings?.paps_balance ?? 0}
+                                            <span className="text-xl ml-2 text-retro-muted">PAPS</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </Card>
+
+                            <Card>
+                                <SectionTitle>Transaction History</SectionTitle>
+                                {!walletData ? (
+                                    <div className="flex justify-center py-8"><Loader2 className="animate-spin text-retro-accent" size={24} /></div>
+                                ) : walletData.transactions.length === 0 ? (
+                                    <div className="text-center py-12 text-retro-muted font-mono">
+                                        <Wallet size={40} className="mx-auto mb-4 opacity-30" />
+                                        <p className="text-sm">NO TRANSACTIONS YET.</p>
+                                    </div>
+                                ) : (
+                                    <ul className="divide-y-2 divide-retro-border">
+                                        {walletData.transactions.map(tx => (
+                                            <li key={tx.id} className="flex items-center justify-between py-3 gap-4">
+                                                <div className="flex-1 min-w-0">
+                                                    <div className={`text-xs font-bold font-mono uppercase ${typeColor[tx.type] || 'text-retro-muted'}`}>
+                                                        {tx.type}
+                                                    </div>
+                                                    {tx.description && (
+                                                        <div className="text-retro-muted font-mono text-xs truncate">{tx.description}</div>
+                                                    )}
+                                                    <div className="text-retro-muted font-mono text-[10px] mt-0.5">
+                                                        {new Date(tx.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                                    </div>
+                                                </div>
+                                                <div className={`font-bold font-mono text-sm flex-shrink-0 ${tx.amount > 0 ? 'text-retro-accent' : 'text-retro-danger'}`}>
+                                                    {tx.amount > 0 ? `+${tx.amount}` : tx.amount} PAPS
+                                                </div>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )}
+                            </Card>
+                        </div>
+                    )}
+
+                    {/* ── Earnings Tab ── */}
+                    {activeTab === 'earnings' && (
+                        <Card>
+                            <SectionTitle>This Week's Earnings</SectionTitle>
+                            {!earningsData ? (
+                                <div className="flex justify-center py-8"><Loader2 className="animate-spin text-retro-accent" size={24} /></div>
+                            ) : (
+                                <div className="space-y-6">
+                                    <div className="grid grid-cols-3 gap-4">
+                                        {[
+                                            { label: 'Earned', value: earningsData.earned, color: 'text-retro-accent' },
+                                            { label: 'Spent', value: earningsData.spent, color: 'text-retro-danger' },
+                                            { label: 'Net', value: earningsData.net, color: earningsData.net >= 0 ? 'text-retro-accent' : 'text-retro-danger' },
+                                        ].map(({ label, value, color }) => (
+                                            <div key={label} className="border-2 border-retro-border p-4 text-center">
+                                                <div className="text-retro-muted font-mono text-xs uppercase tracking-wider mb-2">{label}</div>
+                                                <div className={`text-3xl font-bold font-mono ${color}`}>
+                                                    {earningsData.net === value && value < 0 ? '' : ''}{value}
+                                                    <div className="text-xs text-retro-muted mt-1">PAPS</div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <p className="text-retro-muted font-mono text-xs text-center">
+                                        Week of {new Date(earningsData.week_start).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
+                                        {' '}– {new Date(earningsData.week_end).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                    </p>
+                                    {earningsData.earned === 0 && earningsData.spent === 0 && (
+                                        <div className="text-center border-2 border-dashed border-retro-border p-8 text-retro-muted font-mono text-sm">
+                                            <TrendingUp size={32} className="mx-auto mb-3 opacity-30" />
+                                            No activity this week yet.
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </Card>
+                    )}
+
+                    {/* ── Account Tab ── */}
+                    {activeTab === 'account' && (
+                        <div className="space-y-6">
+                            <Card>
+                                <SectionTitle>Change Email</SectionTitle>
+                                <form onSubmit={handleChangeEmail} className="space-y-4">
+                                    <div className="text-retro-muted font-mono text-sm mb-2">
+                                        Current: <span className="text-retro-text">{settings?.email}</span>
+                                    </div>
+                                    <Input
+                                        label="New Email"
+                                        type="email"
+                                        value={newEmail}
+                                        onChange={e => setNewEmail(e.target.value)}
+                                        required
+                                        placeholder="new@email.com"
+                                    />
+                                    <Input
+                                        label="Current Password"
+                                        type="password"
+                                        value={emailPassword}
+                                        onChange={e => setEmailPassword(e.target.value)}
+                                        required
+                                        placeholder="Confirm with your password"
+                                    />
+                                    {emailMsg && <StatusMessage msg={emailMsg.text} type={emailMsg.type} />}
+                                    <Button type="submit" disabled={emailLoading}>
+                                        {emailLoading ? <><Loader2 size={14} className="animate-spin inline mr-2" />SAVING...</> : 'UPDATE EMAIL_'}
+                                    </Button>
+                                </form>
+                            </Card>
+
+                            <Card>
+                                <SectionTitle>Change Password</SectionTitle>
+                                <form onSubmit={handleChangePassword} className="space-y-4">
+                                    <Input
+                                        label="Current Password"
+                                        type="password"
+                                        value={currentPassword}
+                                        onChange={e => setCurrentPassword(e.target.value)}
+                                        required
+                                        placeholder="Enter current password"
+                                    />
+                                    <Input
+                                        label="New Password"
+                                        type="password"
+                                        value={newPassword}
+                                        onChange={e => setNewPassword(e.target.value)}
+                                        required
+                                        placeholder="Min. 6 characters"
+                                    />
+                                    <Input
+                                        label="Confirm New Password"
+                                        type="password"
+                                        value={confirmPassword}
+                                        onChange={e => setConfirmPassword(e.target.value)}
+                                        required
+                                        placeholder="Repeat new password"
+                                    />
+                                    {passwordMsg && <StatusMessage msg={passwordMsg.text} type={passwordMsg.type} />}
+                                    <Button type="submit" disabled={passwordLoading}>
+                                        {passwordLoading ? <><Loader2 size={14} className="animate-spin inline mr-2" />SAVING...</> : 'UPDATE PASSWORD_'}
+                                    </Button>
+                                </form>
+                            </Card>
+
+                            <Card>
+                                <SectionTitle>Session</SectionTitle>
+                                <Button variant="danger" onClick={handleLogout} className="flex items-center gap-2">
+                                    <LogOut size={16} /> LOGOUT_
+                                </Button>
+                            </Card>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export default Settings;

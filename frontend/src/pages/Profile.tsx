@@ -16,8 +16,13 @@ interface ProfileProps {
 }
 
 interface UserProfile {
-  id: number;
+  id?: number;
   username: string;
+  display_name: string | null;
+  bio: string | null;
+  university: string | null;
+  department: string | null;
+  note_count?: number;
 }
 
 interface Course {
@@ -80,7 +85,14 @@ const Profile: React.FC<ProfileProps> = ({ isPublic = false }) => {
     setIsLoading(true);
     try {
       const res = await api.get(`/api/sharing/${username}`);
-      setProfile(res.data);
+      setProfile({
+        username: res.data.username,
+        display_name: res.data.display_name || null,
+        bio: res.data.bio || null,
+        university: res.data.university || null,
+        department: res.data.department || null,
+        note_count: res.data.note_count || 0,
+      });
     } catch (err: any) {
       setError(err.response?.data?.detail || 'User not found.');
     } finally {
@@ -258,10 +270,22 @@ const Profile: React.FC<ProfileProps> = ({ isPublic = false }) => {
               <div className="mx-auto w-20 h-20 bg-retro-bg border-4 border-retro-accent flex items-center justify-center mb-6 transform -rotate-3 hover:rotate-0 transition-transform">
                 <Lock size={40} className="text-retro-accent" />
               </div>
-              <h2 className="text-3xl font-bold uppercase tracking-tighter text-white mb-2 italic">ENCRYPTED_PROFILE</h2>
-              <p className="text-retro-muted font-mono text-sm">
-                Target: <span className="text-retro-accent underline decoration-dotted underline-offset-4">@{profile.username}</span>
-              </p>
+              <h2 className="text-3xl font-bold uppercase tracking-tighter text-white mb-1 italic">ENCRYPTED_PROFILE</h2>
+              {profile.display_name ? (
+                <>
+                  <p className="text-retro-text font-bold font-mono text-base">{profile.display_name}</p>
+                  <p className="text-retro-muted font-mono text-xs mt-0.5">@{profile.username}</p>
+                </>
+              ) : (
+                <p className="text-retro-muted font-mono text-sm">
+                  Target: <span className="text-retro-accent underline decoration-dotted underline-offset-4">@{profile.username}</span>
+                </p>
+              )}
+              {(profile.university || profile.department) && (
+                <p className="text-retro-muted font-mono text-xs mt-2 flex items-center justify-center gap-1">
+                  🎓 {[profile.university, profile.department].filter(Boolean).join(' · ')}
+                </p>
+              )}
             </div>
 
             <form onSubmit={handleUnlock} className="space-y-8 relative z-10 px-2 pb-4">
@@ -345,20 +369,39 @@ const Profile: React.FC<ProfileProps> = ({ isPublic = false }) => {
 
       <div className="p-4 md:p-8 space-y-8 animate-in fade-in duration-500">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end border-b-4 border-retro-border pb-6 gap-4">
-          <div>
+          <div className="flex-1 min-w-0">
             <div className="inline-flex items-center gap-2 bg-retro-accent/10 text-retro-accent font-bold font-mono px-3 py-1 mb-4 text-xs uppercase border border-retro-accent/30 tracking-widest">
               <Unlock size={12} />
               PUBLIC READ-ONLY ACCESS_
             </div>
             <h1 className="text-5xl md:text-6xl font-bold uppercase tracking-tighter leading-none">
-              {profile.username}<span className="text-retro-accent">'s</span> <br />Library.
+              {profile.display_name || profile.username}<span className="text-retro-accent">'s</span> <br />Library.
             </h1>
+            {profile.display_name && (
+              <p className="text-retro-muted font-mono text-sm mt-1">@{profile.username}</p>
+            )}
+            {(profile.university || profile.department) && (
+              <p className="text-retro-muted font-mono text-xs mt-2 flex items-center gap-1">
+                🎓 {[profile.university, profile.department].filter(Boolean).join(' · ')}
+              </p>
+            )}
+            {profile.bio && (
+              <p className="text-retro-muted font-mono text-sm mt-3 max-w-lg leading-relaxed italic border-l-2 border-retro-accent pl-3">
+                {profile.bio}
+              </p>
+            )}
           </div>
-          <div className="flex gap-4">
+          <div className="flex gap-6 flex-shrink-0">
             <div className="text-right font-mono">
-              <div className="text-xs text-retro-muted uppercase tracking-tighter">TOTAL COURSES</div>
+              <div className="text-xs text-retro-muted uppercase tracking-tighter">COURSES</div>
               <div className="text-2xl font-bold text-retro-accent">{courses.length}</div>
             </div>
+            {profile.note_count !== undefined && (
+              <div className="text-right font-mono">
+                <div className="text-xs text-retro-muted uppercase tracking-tighter">NOTES</div>
+                <div className="text-2xl font-bold text-retro-accent">{profile.note_count}</div>
+              </div>
+            )}
           </div>
         </div>
 
