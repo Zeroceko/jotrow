@@ -95,7 +95,9 @@ const Upload: React.FC = () => {
         formData.append('files', file);
       });
 
-      await api.post('/api/notes', formData);
+      await api.post('/api/notes', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
 
       if (selectedCourse) {
         navigate(`/course/${selectedCourse}`);
