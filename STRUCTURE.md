@@ -1,4 +1,4 @@
-# Notlar Burada - Project Structure
+# JOTROW - Project Structure
 
 ## Backend (FastAPI)
 - `app/models.py`: SQLAlchemy models (User, Course, Note, NoteImage).

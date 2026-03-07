@@ -1,4 +1,4 @@
-# Sprint Plan - Notlar Burada
+# Sprint Plan - JOTROW
 
 ## Sprint 1: Foundation & Backend
 - [ ] Docker Compose setup (DB, MinIO, Backend skeleton).

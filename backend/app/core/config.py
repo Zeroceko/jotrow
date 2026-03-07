@@ -1,7 +1,7 @@
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "Notlar Burada API"
+    PROJECT_NAME: str = "JOTROW API"
     DATABASE_URL: str
     
     SECRET_KEY: str = "supersecretkey_please_change_in_production"

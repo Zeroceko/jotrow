@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .api import auth, notes, sharing
 
-app = FastAPI(title="Notlar Burada API")
+app = FastAPI(title="JOTROW API")
 
 # CORS settings
 app.add_middleware(
@@ -20,4 +20,4 @@ app.include_router(sharing.router, prefix="/api/sharing", tags=["sharing"])
 
 @app.get("/")
 async def root():
-    return {"message": "Notlar Burada API is running"}
+    return {"message": "JOTROW API is running"}

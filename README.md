@@ -1,4 +1,4 @@
-# Notlar Burada 📓
+# JOTROW 📓
 
 Web tabanlı ders notu paylaşım platformu. Kullanıcılar ders bazlı notlarını organize eder, görseller yükler ve 4 haneli paylaşım kodu ile notlarını başkalarıyla paylaşır.
 

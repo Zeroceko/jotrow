@@ -22,7 +22,7 @@ export const Navbar: React.FC = () => {
               <BookText size={24} />
             </div>
             <span className="font-bold text-xl tracking-tight uppercase">
-              NOTLAR<span className="text-retro-accent">.</span>BURADA
+              JOTROW
             </span>
           </Link>
 
