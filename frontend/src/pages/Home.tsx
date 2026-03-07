@@ -12,11 +12,6 @@ const Home: React.FC = () => {
         <div className="flex flex-col items-center">
             {/* Hero Section */}
             <section className="py-20 px-4 text-center max-w-4xl mx-auto">
-                <div className="inline-flex items-center gap-2 bg-retro-accent/10 border border-retro-accent/30 text-retro-accent px-4 py-1 mb-6 rounded-full font-mono text-sm animate-pulse">
-                    <Sparkles size={16} />
-                    <span>V1.0 LIVE: JOT {'->'} REFINE {'->'} SHARE</span>
-                </div>
-
                 <h1 className="text-5xl md:text-7xl font-bold uppercase tracking-tighter mb-6 leading-tight">
                     Capture your thoughts, <br />
                     <span className="text-retro-accent underline decoration-4 underline-offset-8">refine</span> into knowledge.
