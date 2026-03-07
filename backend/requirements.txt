@@ -1,0 +1,14 @@
+fastapi
+Pillow
+pillow-heif
+uvicorn[standard]
+sqlalchemy
+psycopg2-binary
+alembic
+python-multipart
+minio
+python-jose[cryptography]
+passlib[bcrypt]
+python-dotenv
+pydantic[email]
+pydantic-settings

@@ -1,0 +1,46 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Space+Grotesk:wght@400;600;700&display=swap');
+
+@import "tailwindcss";
+
+@theme {
+  --color-retro-bg: #0c0c0c;
+  --color-retro-panel: #1a1a1a;
+  --color-retro-border: #333333;
+  --color-retro-text: #e0e0e0;
+  --color-retro-muted: #888888;
+  --color-retro-accent: #10b981;
+  --color-retro-danger: #ef4444;
+
+  --font-sans: 'Space Grotesk', 'Syne', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+  --shadow-solid: 4px 4px 0 0 rgba(255, 255, 255, 0.15);
+  --shadow-solid-hover: 2px 2px 0 0 rgba(255, 255, 255, 0.15);
+  --shadow-solid-active: 0px 0px 0 0 rgba(255, 255, 255, 0.15);
+  --shadow-solid-accent: 4px 4px 0 0 rgba(16, 185, 129, 0.4);
+}
+
+body {
+  margin: 0;
+  background-color: #0c0c0c;
+  color: #e0e0e0;
+  font-family: 'Space Grotesk', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom scrollbar for retro feel */
+::-webkit-scrollbar {
+  width: 10px;
+}
+::-webkit-scrollbar-track {
+  background: #0c0c0c;
+  border-left: 1px solid #333;
+}
+::-webkit-scrollbar-thumb {
+  background: #333;
+  border-left: 1px solid #555;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #444;
+}
