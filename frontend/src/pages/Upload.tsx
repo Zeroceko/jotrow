@@ -110,7 +110,7 @@ const Upload: React.FC = () => {
       if (typeof detail === 'string') {
         setError(detail);
       } else if (Array.isArray(detail)) {
-        setError(detail.map(d => d.msg || 'Validation error').join(', '));
+        setError(detail.map(d => `${d.loc?.[d.loc?.length - 1] || 'Field'}: ${d.msg || 'Validation error'}`).join(', '));
       } else if (typeof detail === 'object' && detail !== null) {
         setError(JSON.stringify(detail));
       } else {
