@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/Button';
-import { Zap, Gem, Lock, Sparkles } from 'lucide-react';
+import { Zap, Gem, Lock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const Home: React.FC = () => {

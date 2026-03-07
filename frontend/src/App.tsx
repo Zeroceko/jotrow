@@ -11,6 +11,7 @@ import Home from './pages/Home';
 import './index.css';
 
 import CourseDetail from './pages/CourseDetail';
+import NotFound from './pages/NotFound';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated } = useAuth();
@@ -45,6 +46,7 @@ function App() {
               <Route path="/upload" element={<Upload />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/u/:username" element={<Profile isPublic={true} />} />
+              <Route path="*" element={<NotFound />} />
             </Routes>
           </main>
         </div>
