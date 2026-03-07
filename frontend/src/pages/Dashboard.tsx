@@ -117,19 +117,24 @@ const Dashboard: React.FC = () => {
       <Onboarding />
 
       {/* Gamification Stats */}
+      {/* Gamification Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-        <div className="bg-retro-panel border-2 border-retro-border p-3 flex items-center gap-3">
-          <div className="text-retro-accent"><Flame size={20} /></div>
+        <div className="bg-retro-panel border-2 border-retro-border p-4 flex items-center gap-4 shadow-solid hover:shadow-solid-accent transition-all group">
+          <div className="bg-retro-accent/10 p-2 border border-retro-accent/30 text-retro-accent group-hover:scale-110 transition-transform">
+            <Flame size={24} />
+          </div>
           <div>
-            <div className="text-[10px] text-retro-muted uppercase font-bold tracking-tighter">STUDY STREAK</div>
-            <div className="text-xl font-bold font-mono tracking-tighter">1 DAY_</div>
+            <div className="text-[10px] text-retro-muted uppercase font-bold tracking-tighter opacity-70">STUDY STREAK</div>
+            <div className="text-2xl font-bold font-mono tracking-tighter">1 DAY_</div>
           </div>
         </div>
-        <div className="bg-retro-panel border-2 border-retro-border p-3 flex items-center gap-3">
-          <div className="text-retro-accent"><Star size={20} /></div>
+        <div className="bg-retro-panel border-2 border-retro-border p-4 flex items-center gap-4 shadow-solid hover:shadow-solid-accent transition-all group">
+          <div className="bg-retro-accent/10 p-2 border border-retro-accent/30 text-retro-accent group-hover:scale-110 transition-transform">
+            <Star size={24} />
+          </div>
           <div>
-            <div className="text-[10px] text-retro-muted uppercase font-bold tracking-tighter">TOTAL PRAISE</div>
-            <div className="text-xl font-bold font-mono tracking-tighter">0 PTS</div>
+            <div className="text-[10px] text-retro-muted uppercase font-bold tracking-tighter opacity-70">TOTAL PRAISE</div>
+            <div className="text-2xl font-bold font-mono tracking-tighter">5 PTS</div>
           </div>
         </div>
       </div>
@@ -199,7 +204,7 @@ const Dashboard: React.FC = () => {
           {courses.map(course => (
             <Card
               key={course.id}
-              className="group hover:-translate-y-1 transition-transform cursor-pointer relative flex flex-col h-full"
+              className="group hover:-translate-y-2 transition-all duration-300 cursor-pointer relative flex flex-col h-full border-2 hover:border-retro-accent shadow-solid hover:shadow-solid-accent"
             >
               {editingId === course.id ? (
                 /* ── Inline Edit Form ── */
@@ -238,19 +243,21 @@ const Dashboard: React.FC = () => {
                 <>
                   <Link to={`/course/${course.id}`} className="absolute inset-0 z-10" />
                   <div className="flex-grow">
-                    <h3 className="text-2xl font-bold mb-2 group-hover:text-retro-accent transition-colors line-clamp-2">
-                      {course.title}
-                    </h3>
+                    <div className="flex justify-between items-start mb-2">
+                      <h3 className="text-2xl font-bold group-hover:text-retro-accent transition-colors line-clamp-2 uppercase tracking-tighter">
+                        {course.title}
+                      </h3>
+                    </div>
                     {course.description && (
-                      <p className="text-retro-muted font-mono text-sm mb-4 line-clamp-3">
+                      <p className="text-retro-muted font-mono text-sm mb-4 line-clamp-3 leading-relaxed">
                         {course.description}
                       </p>
                     )}
                   </div>
-                  <div className="mt-4 pt-4 border-t-2 border-retro-border border-dashed font-mono text-xs text-retro-muted flex items-center justify-between">
+                  <div className="mt-4 pt-4 border-t-2 border-retro-border border-dashed font-mono text-[10px] text-retro-muted flex items-center justify-between">
                     <div className="flex gap-3 items-center">
-                      <span>{format(new Date(course.created_at), 'MMM dd, yyyy')}</span>
-                      <span className="bg-retro-border/50 text-retro-text px-1.5 py-0.5 rounded-sm">{course.note_count} NOTES</span>
+                      <span className="uppercase">{format(new Date(course.created_at), 'MMM dd, yyyy')}</span>
+                      <span className="bg-retro-accent/10 text-retro-accent px-1.5 py-0.5 border border-retro-accent/30 font-bold">{course.note_count} NOTES</span>
                     </div>
                     {/* Action buttons — above the z-10 Link overlay via z-20 */}
                     <div className="flex gap-1 relative z-20">

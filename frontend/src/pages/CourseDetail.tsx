@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import api from '../services/api';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
-import { Loader2, ArrowLeft, Trash2, X, ChevronLeft, ChevronRight, ZoomIn, Pencil, Check } from 'lucide-react';
+import { Loader2, ArrowLeft, Trash2, X, ChevronLeft, ChevronRight, ZoomIn, Pencil, Check, BookOpen } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface Note {
@@ -195,34 +195,42 @@ const CourseDetail: React.FC = () => {
       )}
 
       {/* ── Main Content ── */}
-      <div className="p-4 md:p-8">
-        <div className="mb-8">
-          <Link to="/" className="inline-flex items-center gap-2 text-retro-muted hover:text-retro-text hover:-translate-x-1 transition-transform font-mono text-sm mb-4">
-            <ArrowLeft size={16} /> RETURN TO DASHBOARD
+      <div className="p-4 md:p-8 animate-in fade-in duration-500">
+        <div className="mb-10">
+          <Link to="/" className="inline-flex items-center gap-2 text-retro-muted hover:text-retro-accent hover:-translate-x-1 transition-all font-mono text-xs mb-6 group">
+            <ArrowLeft size={14} className="group-hover:animate-pulse" /> BACK_TO_DASHBOARD
           </Link>
-          <div className="flex justify-between items-end border-b-2 border-retro-border pb-4">
-            <div>
-              <h1 className="text-4xl font-bold uppercase tracking-tighter">
-                {course?.title || `COURSE ${id}`}<span className="text-retro-accent">_</span>
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-end border-b-4 border-retro-border pb-6 gap-6">
+            <div className="flex-1">
+              <div className="inline-block bg-retro-accent/10 border border-retro-accent/30 text-retro-accent font-bold text-[10px] px-2 py-0.5 mb-3 tracking-widest uppercase">
+                DIRECTORY: {course?.title ? course.title.split(' ')[0] : 'COURSE_INFO'}
+              </div>
+              <h1 className="text-5xl md:text-6xl font-bold uppercase tracking-tighter leading-none">
+                {course?.title || `COURSE ${id}`}<span className="text-retro-accent">.</span>
               </h1>
               {course?.description && (
-                <p className="text-retro-muted font-mono text-sm mt-1">{course.description}</p>
+                <p className="text-retro-muted font-mono text-sm mt-4 max-w-2xl leading-relaxed italic">{course.description}</p>
               )}
             </div>
             <Link to={`/upload?courseId=${id}`}>
-              <Button className="flex items-center gap-2">UPLOAD NOTE</Button>
+              <Button className="h-16 px-8 text-xl group shadow-solid hover:shadow-solid-accent transition-all">
+                <span className="flex items-center gap-2">
+                  UPLOAD_NEW_JOT
+                </span>
+              </Button>
             </Link>
           </div>
         </div>
 
         {notes.length === 0 ? (
-          <div className="border-2 border-dashed border-retro-border p-12 text-center text-retro-muted font-mono">
-            <p>NO NOTES ARCHIVED IN THIS DIRECTORY.</p>
+          <div className="border-4 border-dashed border-retro-border p-20 text-center bg-retro-panel/30">
+            <BookOpen className="mx-auto mb-6 text-retro-muted opacity-20" size={64} />
+            <p className="text-retro-muted font-mono uppercase tracking-widest">Digital archives currently empty.</p>
           </div>
         ) : (
-          <div className="space-y-8">
+          <div className="grid grid-cols-1 gap-12">
             {notes.map(note => (
-              <Card key={note.id} className="relative overflow-hidden">
+              <Card key={note.id} className="relative overflow-hidden border-2 border-retro-border hover:border-retro-accent transition-colors shadow-solid hover:shadow-solid-accent group/note duration-300">
                 <div className="flex flex-col md:flex-row gap-6">
 
                   {/* Images Section */}
@@ -296,11 +304,10 @@ const CourseDetail: React.FC = () => {
                             </button>
                             <button
                               onClick={() => handleDeleteNote(note.id)}
-                              className={`flex items-center gap-1 font-mono text-xs py-1 px-2 border transition-colors ${
-                                deletingNoteId === note.id
-                                  ? 'border-retro-danger text-retro-danger animate-pulse'
-                                  : 'border-transparent text-retro-muted hover:border-retro-danger hover:text-retro-danger'
-                              }`}
+                              className={`flex items-center gap-1 font-mono text-xs py-1 px-2 border transition-colors ${deletingNoteId === note.id
+                                ? 'border-retro-danger text-retro-danger animate-pulse'
+                                : 'border-transparent text-retro-muted hover:border-retro-danger hover:text-retro-danger'
+                                }`}
                               title={deletingNoteId === note.id ? 'Confirm delete?' : 'Delete note'}
                             >
                               <Trash2 size={13} />

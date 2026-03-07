@@ -54,25 +54,35 @@ const Explore: React.FC = () => {
     setSearchResults(null);
   }
 
-  const UserCard = ({ user }: { user: PublicUser }) => (
-    <div onClick={() => navigate(`/u/${user.username}`)} className="cursor-pointer">
-      <Card className="hover:-translate-y-1 transition-transform group">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-retro-accent/20 border-2 border-retro-accent flex items-center justify-center text-retro-accent group-hover:bg-retro-accent group-hover:text-retro-bg transition-colors">
-            <Users size={24} />
-          </div>
-          <div className="flex-1">
-            <h3 className="text-xl font-bold font-mono truncate">@{user.username}</h3>
-            <div className="flex items-center gap-2 text-sm text-retro-muted mt-1">
-              <BookOpen size={14} />
-              <span>{user.course_count} Course{user.course_count !== 1 && 's'}</span>
+  const UserCard = ({ user }: { user: PublicUser }) => {
+    const isDemo = user.username === 'demo';
+    return (
+      <div onClick={() => navigate(`/u/${user.username}`)} className="cursor-pointer">
+        <Card className={`hover:-translate-y-1 transition-all duration-300 group border-2 ${isDemo ? 'border-retro-accent shadow-solid-accent' : 'hover:border-retro-accent'}`}>
+          <div className="flex items-center gap-4">
+            <div className={`w-12 h-12 flex items-center justify-center border-2 transition-colors ${isDemo ? 'bg-retro-accent text-retro-bg border-retro-accent' : 'bg-retro-accent/20 border-retro-accent text-retro-accent group-hover:bg-retro-accent group-hover:text-retro-bg'}`}>
+              <Users size={24} />
             </div>
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <h3 className="text-xl font-bold font-mono truncate">@{user.username}</h3>
+                {isDemo && (
+                  <span className="bg-retro-accent text-retro-bg text-[10px] px-1.5 py-0.5 font-bold uppercase tracking-tighter rounded">DEMO</span>
+                )}
+              </div>
+              <div className="flex items-center gap-2 text-sm text-retro-muted mt-1">
+                <BookOpen size={14} />
+                <span>{user.course_count} Course{user.course_count !== 1 && 's'}</span>
+              </div>
+            </div>
+            <Button variant={isDemo ? 'primary' : 'secondary'} className="hidden md:block">
+              {isDemo ? 'TRY DEMO_' : 'VIEW_'}
+            </Button>
           </div>
-          <Button variant="secondary" className="hidden md:block">VIEW_</Button>
-        </div>
-      </Card>
-    </div>
-  );
+        </Card>
+      </div>
+    );
+  };
 
   return (
     <div className="p-4 md:p-8 max-w-4xl mx-auto space-y-12">

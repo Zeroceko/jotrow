@@ -249,44 +249,57 @@ const Profile: React.FC<ProfileProps> = ({ isPublic = false }) => {
 
   if (!isUnlocked) {
     return (
-      <div className="flex items-center justify-center min-h-[calc(100vh-64px)] p-4">
-        <Card className="w-full max-w-md border-retro-accent shadow-solid-accent relative overflow-hidden">
-          <div className="absolute inset-0 bg-[url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAABZJREFUeNpi2rV7928GBgYmBggwAAgwADcEAwE0zJ4DAAAAAElFTkSuQmCC')] opacity-5 pointer-events-none" />
+      <div className="flex items-center justify-center min-h-[calc(100vh-64px)] p-4 cursor-default">
+        <div className="w-full max-w-md animate-in zoom-in-95 duration-500">
+          <Card className="border-4 border-retro-accent shadow-[12px_12px_0px_#FFD700] relative overflow-hidden bg-retro-panel">
+            <div className="absolute top-0 left-0 w-full h-1 bg-retro-accent animate-pulse"></div>
 
-          <div className="text-center mb-8 relative z-10">
-            <div className="mx-auto w-16 h-16 bg-retro-bg border-2 border-retro-border flex items-center justify-center mb-4 rounded-full">
-              <Lock size={28} className="text-retro-accent" />
-            </div>
-            <h2 className="text-2xl font-bold uppercase tracking-widest text-white">ACCESS_RESTRICTED</h2>
-            <p className="text-retro-muted font-mono mt-2 flex items-center justify-center gap-2">
-              USER: <span className="text-white bg-white/10 px-2 py-0.5">{profile.username}</span>
-            </p>
-          </div>
-
-          <form onSubmit={handleUnlock} className="space-y-6 relative z-10">
-            {unlockError && (
-              <div className="text-retro-danger font-mono text-center text-sm border-2 border-retro-danger p-2 bg-retro-danger/10">
-                {unlockError}
+            <div className="text-center mt-6 mb-8 relative z-10">
+              <div className="mx-auto w-20 h-20 bg-retro-bg border-4 border-retro-accent flex items-center justify-center mb-6 transform -rotate-3 hover:rotate-0 transition-transform">
+                <Lock size={40} className="text-retro-accent" />
               </div>
-            )}
-            <Input
-              type="text"
-              placeholder="ENTER 4-DIGIT PIN"
-              value={shareCode}
-              onChange={(e) => setShareCode(e.target.value.slice(0, 4).toUpperCase())}
-              maxLength={4}
-              required
-              autoComplete="off"
-              className="text-center text-3xl tracking-[1em] indent-[1em] font-bold"
-            />
-            <Button type="submit" className="w-full relative overflow-hidden group" disabled={isUnlocking}>
-              <span className="relative z-10 flex items-center justify-center gap-2">
-                {isUnlocking ? <Loader2 className="animate-spin" size={20} /> : <Unlock size={20} />}
-                DECRYPT_
-              </span>
-            </Button>
-          </form>
-        </Card>
+              <h2 className="text-3xl font-bold uppercase tracking-tighter text-white mb-2 italic">ENCRYPTED_PROFILE</h2>
+              <p className="text-retro-muted font-mono text-sm">
+                Target: <span className="text-retro-accent underline decoration-dotted underline-offset-4">@{profile.username}</span>
+              </p>
+            </div>
+
+            <form onSubmit={handleUnlock} className="space-y-8 relative z-10 px-2 pb-4">
+              {unlockError && (
+                <div className="text-retro-danger font-mono text-center text-xs border-2 border-retro-danger p-3 bg-retro-danger/10 animate-bounce">
+                  [!] ERROR: {unlockError}
+                </div>
+              )}
+              <div className="relative">
+                <Input
+                  type="text"
+                  placeholder="0000"
+                  value={shareCode}
+                  onChange={(e) => setShareCode(e.target.value.slice(0, 4).toUpperCase())}
+                  maxLength={4}
+                  required
+                  autoComplete="off"
+                  className="text-center text-5xl tracking-[0.5em] indent-[0.25em] font-bold py-6 bg-retro-bg/50 border-4 border-retro-border focus:border-retro-accent transition-all"
+                />
+                <div className="absolute -top-3 left-6 bg-retro-panel px-2 text-[10px] font-bold text-retro-muted tracking-widest uppercase">
+                  ENTER 4-DIGIT PIN
+                </div>
+              </div>
+
+              <Button type="submit" className="w-full h-16 text-xl relative overflow-hidden group" disabled={isUnlocking}>
+                <span className="relative z-10 flex items-center justify-center gap-3">
+                  {isUnlocking ? <Loader2 className="animate-spin" size={24} /> : <Unlock size={24} />}
+                  {isUnlocking ? 'DECRYPTING...' : 'DECRYPT_ACCESS'}
+                </span>
+                <div className="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform"></div>
+              </Button>
+            </form>
+
+            <p className="text-center text-[10px] text-retro-muted font-mono mt-4 opacity-50 uppercase tracking-widest pb-2">
+              Unauthorized access is logged. JOTROW Security Protocol v1.4
+            </p>
+          </Card>
+        </div>
       </div>
     );
   }
@@ -330,15 +343,22 @@ const Profile: React.FC<ProfileProps> = ({ isPublic = false }) => {
         </div>
       )}
 
-      <div className="p-4 md:p-8 space-y-8">
-        <div className="flex justify-between items-end border-b-2 border-retro-border pb-4">
+      <div className="p-4 md:p-8 space-y-8 animate-in fade-in duration-500">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end border-b-4 border-retro-border pb-6 gap-4">
           <div>
-            <div className="inline-block bg-retro-accent text-retro-bg font-bold font-mono px-3 py-1 mb-2 text-sm uppercase">
-              PUBLIC READ-ONLY ACCESS
+            <div className="inline-flex items-center gap-2 bg-retro-accent/10 text-retro-accent font-bold font-mono px-3 py-1 mb-4 text-xs uppercase border border-retro-accent/30 tracking-widest">
+              <Unlock size={12} />
+              PUBLIC READ-ONLY ACCESS_
             </div>
-            <h1 className="text-4xl font-bold uppercase tracking-tighter">
-              {profile.username}<span className="text-retro-accent">'s</span> Library
+            <h1 className="text-5xl md:text-6xl font-bold uppercase tracking-tighter leading-none">
+              {profile.username}<span className="text-retro-accent">'s</span> <br />Library.
             </h1>
+          </div>
+          <div className="flex gap-4">
+            <div className="text-right font-mono">
+              <div className="text-xs text-retro-muted uppercase tracking-tighter">TOTAL COURSES</div>
+              <div className="text-2xl font-bold text-retro-accent">{courses.length}</div>
+            </div>
           </div>
         </div>
 
@@ -352,14 +372,14 @@ const Profile: React.FC<ProfileProps> = ({ isPublic = false }) => {
             <p>NO PUBLIC COURSES FOUND.</p>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 gap-6">
             {courses.map(course => {
               const isExpanded = expandedCourseId === course.id;
               const notes = courseNotes[course.id];
               const isLoadingNotes = loadingCourseId === course.id;
 
               return (
-                <Card key={course.id} className="border-retro-border overflow-hidden">
+                <Card key={course.id} className={`border-2 transition-all duration-300 ${isExpanded ? 'border-retro-accent shadow-solid-accent' : 'border-retro-border hover:border-retro-accent shadow-solid overflow-hidden'}`}>
                   {/* Course header — clickable */}
                   <button
                     className="w-full flex items-center justify-between gap-4 text-left group"
