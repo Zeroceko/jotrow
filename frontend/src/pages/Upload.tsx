@@ -36,9 +36,8 @@ const Upload: React.FC = () => {
         const courseId = params.get('courseId');
         if (courseId) {
           setSelectedCourse(courseId);
-        } else if (response.data.length > 0) {
-          setSelectedCourse(response.data[0].id.toString());
         }
+        // Default is empty (library root) unless a courseId is in the URL
       } catch (err) {
         setError('Failed to load courses.');
       }
@@ -80,13 +79,16 @@ const Upload: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedCourse || !title) return;
+    if (!title) return;
 
     setError('');
     setIsLoading(true);
 
     try {
       const formData = new FormData();
-      formData.append('course_id', selectedCourse);
+      if (selectedCourse) {
+        formData.append('course_id', selectedCourse);
+      }
       formData.append('title', title);
       formData.append('content', content);
 
@@ -98,7 +100,11 @@ const Upload: React.FC = () => {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
 
-      navigate(`/course/${selectedCourse}`);
+      if (selectedCourse) {
+        navigate(`/course/${selectedCourse}`);
+      } else {
+        navigate('/');
+      }
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to upload note.');
     } finally {
@@ -131,11 +137,10 @@ const Upload: React.FC = () => {
               className="bg-retro-bg text-retro-text border-2 border-retro-border py-3 px-4 font-mono outline-none focus:border-retro-accent focus:shadow-solid-accent appearance-none cursor-pointer"
               value={selectedCourse}
               onChange={(e) => setSelectedCourse(e.target.value)}
-              required
             >
-              <option value="" disabled>-- SELECT DIRECTORY --</option>
+              <option value="">-- ADD TO LIBRARY (no folder) --</option>
               {courses.map(course => (
-                <option key={course.id} value={course.id}>{course.title}</option>
+                <option key={course.id} value={course.id}>📁 {course.title}</option>
               ))}
             </select>
           </div>
@@ -229,7 +234,7 @@ const Upload: React.FC = () => {
             <Button
               type="submit"
               className="w-full"
-              disabled={isLoading || !selectedCourse}
+              disabled={isLoading}
             >
               {isLoading ? 'UPLOADING...' : 'COMMIT. UPLOAD_'}
             </Button>

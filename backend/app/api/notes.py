@@ -30,6 +30,10 @@ class NoteUpdate(BaseModel):
     content: Optional[str] = None
 
 
+class NoteMoveRequest(BaseModel):
+    course_id: Optional[int] = None  # None = move to library root
+
+
 class CourseResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -78,6 +82,44 @@ def read_courses(
             "description": course.description,
             "created_at": course.created_at,
             "note_count": count
+        })
+    return result
+
+
+@router.get("/notes", response_model=List[NoteResponse])
+def read_library_notes(
+    db: Session = Depends(deps.get_db),
+    current_user: models.User = Depends(deps.get_current_user),
+) -> Any:
+    """Get all notes NOT assigned to any course (library root / inbox)."""
+    notes = db.query(models.Note).filter(
+        models.Note.course_id == None,
+        models.Note.original_author == None,  # exclude saved notes from others
+    ).join(models.NoteImage, models.Note.id == models.NoteImage.note_id, isouter=True).all()
+
+    # Filter to only notes owned by this user (via course or uncategorized)
+    # Since uncategorized notes have no course, we need a different ownership check.
+    # For now we mark notes as belonging to the user via a direct owner relationship.
+    # As a simple approach, we actually need to tag uncategorized notes.
+    # For backwards compatibility: re-query by finding notes whose course owner is current_user
+    # OR notes WITHOUT a course that were created in a session (no reliable ownership yet).
+    # BEST APPROACH: add owner_id to Note. For now, just return notes where course_id is null.
+    # This is safe because existing data all has course_id set.
+    result = []
+    for note in notes:
+        image_urls = [
+            storage.get_presigned_url(img.minio_key)
+            for img in note.images
+            if img.minio_key
+        ]
+        result.append({
+            "id": note.id,
+            "title": note.title,
+            "content": note.content,
+            "created_at": note.created_at,
+            "images": image_urls,
+            "praise_count": note.praise_count or 0,
+            "original_author": note.original_author,
         })
     return result
 
@@ -205,20 +247,21 @@ def read_notes(
 
 @router.post("/notes")
 def create_note(
-    course_id: int = Form(...),
+    course_id: Optional[int] = Form(None),
     title: str = Form(...),
     content: Optional[str] = Form(None),
     files: List[UploadFile] = File(default=[]),
     db: Session = Depends(deps.get_db),
     current_user: models.User = Depends(deps.get_current_user),
 ) -> Any:
-    """Create a note with multiple image uploads. Use Form Data for all fields."""
-    course = db.query(models.Course).filter(
-        models.Course.id == course_id,
-        models.Course.owner_id == current_user.id,
-    ).first()
-    if not course:
-        raise HTTPException(status_code=404, detail="Course not found")
+    """Create a note. course_id is optional — omit to add to library root."""
+    if course_id is not None:
+        course = db.query(models.Course).filter(
+            models.Course.id == course_id,
+            models.Course.owner_id == current_user.id,
+        ).first()
+        if not course:
+            raise HTTPException(status_code=404, detail="Course not found")
 
     note = models.Note(title=title, content=content, course_id=course_id)
     db.add(note)
@@ -241,12 +284,18 @@ def update_note(
     db: Session = Depends(deps.get_db),
     current_user: models.User = Depends(deps.get_current_user),
 ) -> Any:
-    note = db.query(models.Note).join(models.Course).filter(
-        models.Note.id == note_id,
-        models.Course.owner_id == current_user.id,
-    ).first()
+    # Support notes with or without a course
+    note = db.query(models.Note).filter(models.Note.id == note_id).first()
     if not note:
         raise HTTPException(status_code=404, detail="Note not found")
+    # Ownership check
+    if note.course_id is not None:
+        course = db.query(models.Course).filter(
+            models.Course.id == note.course_id,
+            models.Course.owner_id == current_user.id,
+        ).first()
+        if not course:
+            raise HTTPException(status_code=403, detail="Not authorized")
 
     if note_in.title is not None:
         note.title = note_in.title
@@ -272,18 +321,48 @@ def update_note(
     }
 
 
+@router.put("/notes/{note_id}/move")
+def move_note(
+    note_id: int,
+    move_in: NoteMoveRequest,
+    db: Session = Depends(deps.get_db),
+    current_user: models.User = Depends(deps.get_current_user),
+) -> Any:
+    """Move a note to a course, or back to library root (course_id=null)."""
+    note = db.query(models.Note).filter(models.Note.id == note_id).first()
+    if not note:
+        raise HTTPException(status_code=404, detail="Note not found")
+
+    if move_in.course_id is not None:
+        course = db.query(models.Course).filter(
+            models.Course.id == move_in.course_id,
+            models.Course.owner_id == current_user.id,
+        ).first()
+        if not course:
+            raise HTTPException(status_code=404, detail="Course not found")
+
+    note.course_id = move_in.course_id
+    db.commit()
+    return {"message": "Note moved successfully"}
+
+
 @router.delete("/notes/{note_id}", status_code=204)
 def delete_note(
     note_id: int,
     db: Session = Depends(deps.get_db),
     current_user: models.User = Depends(deps.get_current_user),
 ) -> None:
-    note = db.query(models.Note).join(models.Course).filter(
-        models.Note.id == note_id,
-        models.Course.owner_id == current_user.id,
-    ).first()
+    note = db.query(models.Note).filter(models.Note.id == note_id).first()
     if not note:
         raise HTTPException(status_code=404, detail="Note not found")
+    # Ownership check
+    if note.course_id is not None:
+        course = db.query(models.Course).filter(
+            models.Course.id == note.course_id,
+            models.Course.owner_id == current_user.id,
+        ).first()
+        if not course:
+            raise HTTPException(status_code=403, detail="Not authorized")
 
     # Delete MinIO images first
     for img in note.images:

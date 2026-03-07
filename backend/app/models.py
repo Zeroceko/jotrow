@@ -30,7 +30,7 @@ class Note(Base):
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String, index=True)
     content = Column(Text, nullable=True)
-    course_id = Column(Integer, ForeignKey("courses.id"))
+    course_id = Column(Integer, ForeignKey("courses.id"), nullable=True)
     praise_count = Column(Integer, default=0)
     original_author = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
