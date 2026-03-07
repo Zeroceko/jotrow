@@ -1,16 +1,29 @@
 import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LogOut, BookText } from 'lucide-react';
+import { LogOut, BookText, PlusCircle } from 'lucide-react';
 import { Button } from './ui/Button';
 
 export const Navbar: React.FC = () => {
   const { isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Helper to extract courseId from path if present
+  const courseMatch = location.pathname.match(/\/course\/(\d+)/);
+  const currentCourseId = courseMatch ? courseMatch[1] : null;
 
   const handleLogout = () => {
     logout();
-    navigate('/login');
+    navigate('/');
+  };
+
+  const handleUploadClick = () => {
+    if (currentCourseId) {
+      navigate(`/upload?courseId=${currentCourseId}`);
+    } else {
+      navigate('/upload');
+    }
   };
 
   return (
@@ -29,15 +42,16 @@ export const Navbar: React.FC = () => {
           <div className="flex items-center gap-4">
             {isAuthenticated ? (
               <>
-                <Link to="/explore" className="text-retro-muted hover:text-retro-text font-medium transition-colors mr-4">
-                  Explore
+                <Link to="/explore" className="text-retro-muted hover:text-retro-text font-medium transition-colors mr-2">
+                  EXPLORE
                 </Link>
-                <Button variant="ghost" onClick={() => navigate('/upload')}>
-                  Upload Note
+                <Button variant="ghost" onClick={handleUploadClick} className="flex gap-2 items-center">
+                  <PlusCircle size={18} />
+                  <span className="hidden sm:inline">UPLOAD_</span>
                 </Button>
                 <Button variant="secondary" onClick={handleLogout} className="flex gap-2 items-center px-4">
                   <LogOut size={16} />
-                  <span>Logout</span>
+                  <span className="hidden sm:inline">LOGOUT_</span>
                 </Button>
               </>
             ) : (

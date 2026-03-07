@@ -6,6 +6,8 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { BookOpen, Plus, Loader2, Trash2, Pencil, X, Check } from 'lucide-react';
 import { format } from 'date-fns';
+import Onboarding from '../components/Onboarding';
+import { Flame, Star } from 'lucide-react';
 
 interface Course {
   id: number;
@@ -112,6 +114,26 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="p-4 md:p-8 space-y-8">
+      <Onboarding />
+
+      {/* Gamification Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+        <div className="bg-retro-panel border-2 border-retro-border p-3 flex items-center gap-3">
+          <div className="text-retro-accent"><Flame size={20} /></div>
+          <div>
+            <div className="text-[10px] text-retro-muted uppercase font-bold tracking-tighter">STUDY STREAK</div>
+            <div className="text-xl font-bold font-mono tracking-tighter">1 DAY_</div>
+          </div>
+        </div>
+        <div className="bg-retro-panel border-2 border-retro-border p-3 flex items-center gap-3">
+          <div className="text-retro-accent"><Star size={20} /></div>
+          <div>
+            <div className="text-[10px] text-retro-muted uppercase font-bold tracking-tighter">TOTAL PRAISE</div>
+            <div className="text-xl font-bold font-mono tracking-tighter">0 PTS</div>
+          </div>
+        </div>
+      </div>
+
       <div className="flex justify-between items-end border-b-2 border-retro-border pb-4">
         <div>
           <h1 className="text-4xl font-bold uppercase tracking-tighter">Your Courses<span className="text-retro-accent">_</span></h1>
@@ -132,7 +154,7 @@ const Dashboard: React.FC = () => {
 
       {isCreating && (
         <Card className="border-retro-accent shadow-solid-accent mb-8">
-          <h2 className="text-xl font-bold uppercase tracking-tight mb-4">Initialize Course</h2>
+          <h2 className="text-xl font-bold uppercase tracking-tight mb-4">Create New Course</h2>
           <form onSubmit={handleCreateCourse} className="space-y-4">
             <Input
               label="COURSE TITLE"
@@ -159,9 +181,18 @@ const Dashboard: React.FC = () => {
       )}
 
       {courses.length === 0 && !isCreating ? (
-        <div className="border-2 border-dashed border-retro-border p-12 text-center text-retro-muted font-mono">
-          <BookOpen className="mx-auto mb-4 opacity-50" size={48} />
-          <p>NO COURSES FOUND. INITIALIZE A NEW COURSE TO BEGIN.</p>
+        <div className="border-4 border-dashed border-retro-border p-16 text-center bg-retro-panel/30">
+          <BookOpen className="mx-auto mb-6 text-retro-muted opacity-20" size={64} />
+          <h2 className="text-2xl font-bold uppercase tracking-tighter mb-2">Your library is a blank slate</h2>
+          <p className="text-retro-muted font-mono mb-8 max-w-sm mx-auto">
+            Every great resource starts with a single jot. Ready to organize your knowledge?
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Button onClick={() => setIsCreating(true)} className="flex items-center gap-2">
+              <Plus size={18} />
+              CREATE YOUR FIRST COURSE_
+            </Button>
+          </div>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -218,8 +249,8 @@ const Dashboard: React.FC = () => {
                   </div>
                   <div className="mt-4 pt-4 border-t-2 border-retro-border border-dashed font-mono text-xs text-retro-muted flex items-center justify-between">
                     <div className="flex gap-3 items-center">
-                        <span>{format(new Date(course.created_at), 'MMM dd, yyyy')}</span>
-                        <span className="bg-retro-border/50 text-retro-text px-1.5 py-0.5 rounded-sm">{course.note_count} NOTES</span>
+                      <span>{format(new Date(course.created_at), 'MMM dd, yyyy')}</span>
+                      <span className="bg-retro-border/50 text-retro-text px-1.5 py-0.5 rounded-sm">{course.note_count} NOTES</span>
                     </div>
                     {/* Action buttons — above the z-10 Link overlay via z-20 */}
                     <div className="flex gap-1 relative z-20">

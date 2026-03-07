@@ -7,6 +7,7 @@ import Dashboard from './pages/Dashboard';
 import Upload from './pages/Upload';
 import Profile from './pages/Profile';
 import Explore from './pages/Explore';
+import Home from './pages/Home';
 import './index.css';
 
 import CourseDetail from './pages/CourseDetail';
@@ -14,9 +15,14 @@ import CourseDetail from './pages/CourseDetail';
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated } = useAuth();
   if (!isAuthenticated) {
-    return <Navigate to="/explore" replace />;
+    return <Navigate to="/" replace />;
   }
   return <>{children}</>;
+};
+
+const Root = () => {
+  const { isAuthenticated } = useAuth();
+  return isAuthenticated ? <Dashboard /> : <Home />;
 };
 
 function App() {
@@ -27,12 +33,12 @@ function App() {
           <Navbar />
           <main className="max-w-7xl mx-auto">
             <Routes>
-              <Route path="/" element={
+              <Route path="/" element={<Root />} />
+              <Route path="/course/:id" element={
                 <ProtectedRoute>
-                  <Dashboard />
+                  <CourseDetail />
                 </ProtectedRoute>
               } />
-              <Route path="/course/:id" element={<CourseDetail />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/explore" element={<Explore />} />

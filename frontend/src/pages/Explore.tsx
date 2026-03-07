@@ -117,8 +117,18 @@ const Explore: React.FC = () => {
             searchResults.length > 0 ? (
               searchResults.map(user => <UserCard key={user.username} user={user} />)
             ) : (
-              <div className="col-span-full py-12 text-center border-2 border-dashed border-retro-border">
-                <p className="text-retro-muted font-mono">No profiles found matching "{query}".</p>
+              <div className="col-span-full py-16 text-center border-4 border-dashed border-retro-border bg-retro-panel/50">
+                <Search size={48} className="mx-auto text-retro-muted mb-4 opacity-20" />
+                <p className="text-retro-text font-bold text-xl uppercase tracking-tighter mb-2">Searching the void...</p>
+                <p className="text-retro-muted font-mono mb-6 italic">No profiles found matching "{query}".</p>
+                <div className="flex flex-col items-center gap-2 text-sm font-mono">
+                  <p className="text-retro-accent uppercase font-bold">Try these instead:</p>
+                  <ul className="text-retro-muted space-y-1">
+                    <li>• Search by full username (case sensitive)</li>
+                    <li>• Check for typos in the name</li>
+                    <li>• Try searching for "demo" (if available)</li>
+                  </ul>
+                </div>
               </div>
             )
           ) : (

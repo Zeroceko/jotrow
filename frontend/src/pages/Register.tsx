@@ -51,27 +51,28 @@ const Register: React.FC = () => {
             <p className="text-retro-text font-mono">Your account has been created.</p>
           </div>
 
-          <div className="bg-retro-bg border-2 border-retro-border p-6 mb-8 text-center relative group">
-            <p className="text-retro-muted font-mono text-sm mb-4 uppercase tracking-widest">Your Secret Share Code</p>
-            <div className="text-5xl font-mono font-bold tracking-widest text-white">
+          <div className="bg-retro-panel border-2 border-retro-border p-8 mb-8 text-center relative group shadow-solid">
+            <p className="text-retro-muted font-mono text-xs mb-4 uppercase tracking-widest opacity-70">Your Private Share Code</p>
+            <div className="text-6xl font-mono font-bold tracking-widest text-retro-accent mb-2">
               {shareCode}
             </div>
 
-            <button
+            <Button
+              variant="secondary"
               onClick={copyToClipboard}
-              className="absolute top-2 right-2 p-2 text-retro-muted hover:text-retro-accent transition-colors mix-blend-difference"
-              title="Copy code"
+              className="mt-4 flex items-center gap-2 mx-auto py-1 px-4 text-sm"
             >
-              {copied ? <Check size={20} className="text-retro-accent" /> : <Copy size={20} />}
-            </button>
+              {copied ? <Check size={16} /> : <Copy size={16} />}
+              {copied ? 'COPIED!' : 'COPY CODE_'}
+            </Button>
 
-            <div className="mt-4 pt-4 border-t-2 border-retro-border border-dashed text-xs text-retro-muted text-left font-mono">
-              ⚠️ SAVE THIS CODE. Anyone with this code can view your public profile at /u/{username}
+            <div className="mt-8 pt-4 border-t-2 border-retro-border border-dashed text-[10px] text-retro-muted text-left font-mono leading-tight">
+              ⚠️ ATTENTION: This code is your only key to public sharing. Anyone with this PIN can view your shared notes. Keep it safe.
             </div>
           </div>
 
-          <Button onClick={() => navigate('/login')} className="w-full">
-            PROCEED TO LOGIN_
+          <Button onClick={() => navigate('/login')} variant="primary" className="w-full py-4 text-lg">
+            AUTHENTICATE & START_
           </Button>
         </Card>
       </div>
