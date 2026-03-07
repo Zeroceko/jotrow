@@ -105,6 +105,7 @@ const Upload: React.FC = () => {
         navigate('/');
       }
     } catch (err: any) {
+      console.log("API ERROR RESPONSE:", err.response);
       const detail = err.response?.data?.detail;
       if (typeof detail === 'string') {
         setError(detail);
