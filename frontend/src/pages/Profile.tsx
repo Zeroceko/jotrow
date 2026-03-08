@@ -160,7 +160,7 @@ const Profile: React.FC<ProfileProps> = ({ isPublic = false }) => {
     setUnlockError('');
     setIsUnlocking(true);
     try {
-      await api.post(`/api/sharing/notes/${note.id}/unlock`);
+      await api.post(`/api/sharing/notes/${note.id}/unlock`, { method: 'paps' });
       alert("Note unlocked successfully!");
       if (expandedCourseId) {
         await reloadCourseNotes(expandedCourseId);
@@ -171,7 +171,8 @@ const Profile: React.FC<ProfileProps> = ({ isPublic = false }) => {
       if (err.response?.status === 400 && err.response?.data?.detail === "Insufficient PAPS balance") {
         alert("You don't have enough PAPS!");
       } else {
-        setUnlockError(err.response?.data?.detail || 'Error paying with PAPS.');
+        const detail = err.response?.data?.detail;
+        setUnlockError(typeof detail === 'string' ? detail : JSON.stringify(detail) || 'Error paying with PAPS.');
       }
     } finally {
       setIsUnlocking(false);
