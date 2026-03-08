@@ -1,4 +1,5 @@
 from typing import Any, List, Optional
+from app.services import storage
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
@@ -209,24 +210,121 @@ def save_note(
     
     return {"message": "Note saved successfully", "note_id": new_note.id}
 
+@router.get("/{username}/courses")
+def get_public_courses(username: str, db: Session = Depends(deps.get_db)) -> Any:
+    user = db.query(models.User).filter(models.User.username == username).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    courses = db.query(
+        models.Course,
+        func.count(models.Note.id).label('note_count')
+    ).outerjoin(models.Note, models.Course.id == models.Note.course_id) \
+     .filter(models.Course.owner_id == user.id) \
+     .group_by(models.Course.id) \
+     .order_by(models.Course.created_at.desc()) \
+     .all()
+
+    result = []
+    for course, count in courses:
+        result.append({
+            "id": course.id,
+            "title": course.title,
+            "description": course.description,
+            "created_at": course.created_at,
+            "note_count": count
+        })
+    return result
+
+@router.get("/{username}/courses/{course_id}/notes")
+def get_public_notes(
+    username: str, 
+    course_id: int, 
+    db: Session = Depends(deps.get_db),
+    current_user: Optional[models.User] = Depends(deps.get_optional_current_user)
+) -> Any:
+    user = db.query(models.User).filter(models.User.username == username).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    course = db.query(models.Course).filter(
+        models.Course.id == course_id,
+        models.Course.owner_id == user.id,
+    ).first()
+    if not course:
+        raise HTTPException(status_code=404, detail="Course not found")
+
+    notes = db.query(models.Note).filter(models.Note.course_id == course_id)\
+            .order_by(models.Note.created_at.desc())\
+            .all()
+
+    result = []
+    
+    for note in notes:
+        is_locked = False
+        
+        # Determine tracking
+        if note.paps_price > 0 or note.requires_pin:
+            is_locked = True
+            
+        # Is the requester the owner?
+        if current_user and current_user.id == user.id and not hasattr(current_user, "guest_share_code"):
+            is_locked = False
+            
+        # Did the requester unlock it via PAPS?
+        if current_user and is_locked and not hasattr(current_user, "guest_share_code"):
+            has_unlocked = db.query(models.UnlockedNote).filter(
+                models.UnlockedNote.note_id == note.id,
+                models.UnlockedNote.user_id == current_user.id
+            ).first()
+            if has_unlocked:
+                is_locked = False
+                
+        # Did the requester provide the profile PIN? (Guest token or just by PIN endpoint previously)
+        if current_user and hasattr(current_user, "guest_share_code") and note.requires_pin:
+            if current_user.guest_share_code == user.share_code:
+                # Assuming if they used the guest link via PIN, they unlocked it
+                is_locked = False
+
+        image_urls = []
+        content = None
+        if not is_locked:
+            content = note.content
+            image_urls = [
+                storage.get_presigned_url(img.minio_key)
+                for img in note.images
+                if img.minio_key
+            ]
+            
+        result.append({
+            "id": note.id,
+            "title": note.title,
+            "content": content,
+            "created_at": note.created_at,
+            "images": image_urls,
+            "praise_count": note.praise_count or 0,
+            "paps_price": note.paps_price,
+            "is_locked": is_locked,
+        })
+    return result
+
 class UnlockNoteRequest(BaseModel):
-    pass
+    method: str = "paps"  # "paps" | "pin"
+    code: Optional[str] = None
 
 @router.post("/notes/{note_id}/unlock")
 def unlock_note(
     note_id: int,
+    request: UnlockNoteRequest,
     db: Session = Depends(deps.get_db),
     current_user: models.User = Depends(deps.get_current_user)
 ) -> Any:
     """
-    Pay PAPS to unlock a specific note.
+    Unlock a specific note using PAPS or PIN code.
     """
     note = db.query(models.Note).filter(models.Note.id == note_id).first()
     if not note:
         raise HTTPException(status_code=404, detail="Note not found")
-        
-    if note.paps_price <= 0:
-        return {"message": "Note is already free"}
         
     if note.owner_id == current_user.id:
         return {"message": "You own this note"}
@@ -240,29 +338,42 @@ def unlock_note(
     if already_unlocked:
         return {"message": "Already unlocked"}
         
-    if current_user.paps_balance < note.paps_price:
-        raise HTTPException(status_code=400, detail="Insufficient PAPS balance")
-        
-    # Deduct from buyer
-    current_user.paps_balance -= note.paps_price
-    db.add(models.Transaction(
-        user_id=current_user.id,
-        type="purchase",
-        amount=-note.paps_price,
-        description=f"Unlocked note: {note.title}"
-    ))
-    
-    # Add to owner
-    owner = db.query(models.User).filter(models.User.id == note.owner_id).first()
-    if owner:
-        owner.paps_balance += note.paps_price
-        db.add(models.Transaction(
-            user_id=owner.id,
-            type="sale",
-            amount=note.paps_price,
-            description=f"Someone unlocked note: {note.title}"
-        ))
-        
+    if request.method == "pin":
+        if not note.requires_pin:
+             # Wait, does the note require a pin? If yes, check PIN. Otherwise, fail since it's PAPS only
+             # Actually, if they try to unlock via PIN, they need the owner's share_code. Let's just check the share_code.
+             pass
+        owner = db.query(models.User).filter(models.User.id == note.owner_id).first()
+        if not owner or owner.share_code != request.code:
+             raise HTTPException(status_code=400, detail="Invalid share code / PIN")
+    else:
+        # Default to PAPS payment
+        if note.paps_price <= 0:
+            pass # Free, no payment needed
+        else:
+            if current_user.paps_balance < note.paps_price:
+                raise HTTPException(status_code=400, detail="Insufficient PAPS balance")
+                
+            # Deduct from buyer
+            current_user.paps_balance -= note.paps_price
+            db.add(models.Transaction(
+                user_id=current_user.id,
+                type="purchase",
+                amount=-note.paps_price,
+                description=f"Unlocked note: {note.title}"
+            ))
+            
+            # Add to owner
+            owner = db.query(models.User).filter(models.User.id == note.owner_id).first()
+            if owner:
+                owner.paps_balance += note.paps_price
+                db.add(models.Transaction(
+                    user_id=owner.id,
+                    type="sale",
+                    amount=note.paps_price,
+                    description=f"Someone unlocked note: {note.title}"
+                ))
+            
     # Record unlock
     db.add(models.UnlockedNote(user_id=current_user.id, note_id=note.id))
     

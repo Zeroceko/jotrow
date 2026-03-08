@@ -103,7 +103,7 @@ const Profile: React.FC<ProfileProps> = ({ isPublic = false }) => {
       if (tokenOverride) headers.Authorization = `Bearer ${tokenOverride}`;
       else if (guestToken) headers.Authorization = `Bearer ${guestToken}`;
 
-      const res = await api.get('/api/courses', { headers });
+      const res = await api.get(`/api/sharing/${username}/courses`, { headers });
       setCourses(res.data);
     } catch {
       setError('Failed to fetch public courses.');
@@ -183,7 +183,7 @@ const Profile: React.FC<ProfileProps> = ({ isPublic = false }) => {
     if (tkn) headers.Authorization = `Bearer ${tkn}`;
     else if (guestToken) headers.Authorization = `Bearer ${guestToken}`;
 
-    const res = await api.get(`/api/courses/${courseId}/notes`, { headers });
+    const res = await api.get(`/api/sharing/${username}/courses/${courseId}/notes`, { headers });
     setCourseNotes(prev => ({ ...prev, [courseId]: res.data }));
   };
 
@@ -197,7 +197,7 @@ const Profile: React.FC<ProfileProps> = ({ isPublic = false }) => {
 
     setLoadingCourseId(courseId);
     try {
-      const res = await api.get(`/api/courses/${courseId}/notes`, {
+      const res = await api.get(`/api/sharing/${username}/courses/${courseId}/notes`, {
         headers: { Authorization: `Bearer ${guestToken}` },
       });
       setCourseNotes(prev => ({ ...prev, [courseId]: res.data }));
