@@ -54,6 +54,8 @@ class NoteResponse(BaseModel):
     images: List[str] = []
     praise_count: int = 0
     original_author: Optional[str] = None
+    paps_price: int = 0
+    is_locked: bool = False
 
 
 # ── Course Endpoints ──────────────────────────────────────────────────────────
@@ -250,6 +252,7 @@ def create_note(
     course_id: Optional[int] = Form(None),
     title: str = Form(...),
     content: Optional[str] = Form(None),
+    paps_price: int = Form(0),
     files: List[UploadFile] = File(default=[]),
     db: Session = Depends(deps.get_db),
     current_user: models.User = Depends(deps.get_current_user),
@@ -263,7 +266,7 @@ def create_note(
         if not course:
             raise HTTPException(status_code=404, detail="Course not found")
 
-    note = models.Note(title=title, content=content, course_id=course_id, owner_id=current_user.id)
+    note = models.Note(title=title, content=content, course_id=course_id, owner_id=current_user.id, paps_price=paps_price)
     db.add(note)
     db.commit()
     db.refresh(note)

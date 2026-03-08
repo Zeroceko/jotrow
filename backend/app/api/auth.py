@@ -50,12 +50,10 @@ def register(
             detail="The user with this email already exists in the system.",
         )
     
-    code = generate_share_code()
-            
     user = models.User(
         email=user_in.email,
         hashed_password=security.get_password_hash(user_in.password),
-        share_code=code,
+        share_code=None,
     )
     db.add(user)
     db.commit()

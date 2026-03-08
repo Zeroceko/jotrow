@@ -7,6 +7,7 @@ import { Input } from '../components/ui/Input';
 import { BookOpen, Plus, Loader2, Trash2, Pencil, X, Check, FileText, FolderPlus, Star, ArrowRight } from 'lucide-react';
 import { format } from 'date-fns';
 import Onboarding from '../components/Onboarding';
+import { useLanguage } from '../context/LanguageContext';
 
 interface Course {
   id: number;
@@ -49,6 +50,7 @@ const Dashboard: React.FC = () => {
   const [dragOverCourseId, setDragOverCourseId] = useState<number | null>(null);
 
   const navigate = useNavigate();
+  const { t } = useLanguage();
 
   useEffect(() => {
     fetchAll();
@@ -157,7 +159,7 @@ const Dashboard: React.FC = () => {
             <FileText size={22} />
           </div>
           <div>
-            <div className="text-[10px] text-retro-muted uppercase font-bold tracking-tighter opacity-70">TOTAL NOTES</div>
+            <div className="text-[10px] text-retro-muted uppercase font-bold tracking-tighter opacity-70">{t('dash.total_notes')}</div>
             <div className="text-2xl font-bold font-mono tracking-tighter">{totalNotes}_</div>
           </div>
         </div>
@@ -166,7 +168,7 @@ const Dashboard: React.FC = () => {
             <BookOpen size={22} />
           </div>
           <div>
-            <div className="text-[10px] text-retro-muted uppercase font-bold tracking-tighter opacity-70">FOLDERS</div>
+            <div className="text-[10px] text-retro-muted uppercase font-bold tracking-tighter opacity-70">{t('dash.folders')}</div>
             <div className="text-2xl font-bold font-mono tracking-tighter">{courses.length}_</div>
           </div>
         </div>
@@ -175,7 +177,7 @@ const Dashboard: React.FC = () => {
             <Star size={22} />
           </div>
           <div>
-            <div className="text-[10px] text-retro-muted uppercase font-bold tracking-tighter opacity-70">TOTAL PRAISE</div>
+            <div className="text-[10px] text-retro-muted uppercase font-bold tracking-tighter opacity-70">{t('dash.total_praise')}</div>
             <div className="text-2xl font-bold font-mono tracking-tighter">
               {courses.reduce((s, _) => s, 0) + libraryNotes.reduce((s, n) => s + (n.praise_count || 0), 0)} PTS
             </div>
@@ -186,8 +188,8 @@ const Dashboard: React.FC = () => {
       {/* Header actions */}
       <div className="flex flex-wrap gap-3 justify-between items-end border-b-2 border-retro-border pb-4">
         <div>
-          <h1 className="text-4xl font-bold uppercase tracking-tighter">Your Library<span className="text-retro-accent">_</span></h1>
-          <p className="text-retro-muted font-mono mt-2 text-sm">Add notes freely, organize into folders anytime.</p>
+          <h1 className="text-4xl font-bold uppercase tracking-tighter">{t('dash.title')}<span className="text-retro-accent">_</span></h1>
+          <p className="text-retro-muted font-mono mt-2 text-sm">{t('dash.subtitle')}</p>
         </div>
         <div className="flex gap-3">
           <Button
@@ -196,11 +198,11 @@ const Dashboard: React.FC = () => {
             className="flex items-center gap-2"
           >
             <FolderPlus size={16} />
-            {isCreating ? 'CANCEL' : 'NEW FOLDER'}
+            {isCreating ? t('dash.cancel') : t('dash.new_folder')}
           </Button>
           <Button onClick={() => navigate('/upload')} className="flex items-center gap-2">
             <Plus size={16} />
-            QUICK ADD_
+            {t('dash.quick_add')}
           </Button>
         </div>
       </div>
@@ -215,18 +217,18 @@ const Dashboard: React.FC = () => {
       {/* Create folder inline form */}
       {isCreating && (
         <Card className="border-retro-accent shadow-solid-accent">
-          <h2 className="text-xl font-bold uppercase tracking-tight mb-4">Create New Folder</h2>
+          <h2 className="text-xl font-bold uppercase tracking-tight mb-4">{t('dash.create_folder')}</h2>
           <form onSubmit={handleCreateCourse} className="space-y-4">
             <Input
-              label="FOLDER NAME"
+              label={t('dash.folder_name')}
               value={newTitle}
               onChange={(e) => setNewTitle(e.target.value)}
-              placeholder="e.g. CS101, Design Notes..."
+              placeholder="e.g. CS101..."
               required
             />
             <div className="flex flex-col w-full">
               <label className="mb-2 text-sm font-bold text-retro-muted tracking-widest uppercase">
-                DESCRIPTION (Optional)
+                {t('dash.desc_optional')}
               </label>
               <textarea
                 className="bg-retro-bg text-retro-text border-2 border-retro-border py-3 px-4 font-mono outline-none focus:border-retro-accent focus:shadow-solid-accent resize-none h-20"
@@ -235,7 +237,7 @@ const Dashboard: React.FC = () => {
               />
             </div>
             <div className="flex justify-end">
-              <Button type="submit">CREATE_</Button>
+              <Button type="submit">{t('dash.create')}</Button>
             </div>
           </form>
         </Card>
@@ -246,7 +248,7 @@ const Dashboard: React.FC = () => {
         <div>
           <div className="flex items-center gap-3 mb-4">
             <h2 className="text-xl font-bold uppercase tracking-tighter font-mono">
-              📥 Inbox <span className="text-retro-muted text-base">— not in any folder</span>
+              📥 {t('dash.inbox')} <span className="text-retro-muted text-base">— {t('dash.not_in_folder')}</span>
             </h2>
             <span className="bg-retro-accent/10 text-retro-accent px-2 py-0.5 border border-retro-accent/30 font-mono text-xs font-bold">
               {libraryNotes.length}
@@ -277,9 +279,9 @@ const Dashboard: React.FC = () => {
                 {/* Move to folder */}
                 {movingNoteId === note.id ? (
                   <div className="mt-3 pt-3 border-t-2 border-dashed border-retro-border space-y-2">
-                    <p className="text-[10px] font-mono text-retro-muted uppercase tracking-widest">Move to folder:</p>
+                    <p className="text-[10px] font-mono text-retro-muted uppercase tracking-widest">{t('dash.move_to')}</p>
                     {courses.length === 0 ? (
-                      <p className="text-[10px] font-mono text-retro-muted italic">No folders yet. Create one first.</p>
+                      <p className="text-[10px] font-mono text-retro-muted italic">{t('dash.no_folders')}</p>
                     ) : (
                       courses.map(c => (
                         <button
@@ -295,7 +297,7 @@ const Dashboard: React.FC = () => {
                       onClick={() => setMovingNoteId(null)}
                       className="text-[10px] font-mono text-retro-muted hover:text-retro-text mt-1"
                     >
-                      cancel
+                      {t('dash.cancel')}
                     </button>
                   </div>
                 ) : (
@@ -318,7 +320,7 @@ const Dashboard: React.FC = () => {
       {/* ── FOLDERS (Courses) ─────────────────────────────────── */}
       <div>
         <h2 className="text-xl font-bold uppercase tracking-tighter font-mono mb-4">
-          🗂️ Folders
+          🗂️ {t('dash.folders')}
           {courses.length > 0 && (
             <span className="ml-3 bg-retro-accent/10 text-retro-accent px-2 py-0.5 border border-retro-accent/30 font-mono text-xs font-bold">
               {courses.length}
@@ -329,26 +331,25 @@ const Dashboard: React.FC = () => {
         {courses.length === 0 && libraryNotes.length === 0 ? (
           <div className="border-4 border-dashed border-retro-border p-16 text-center bg-retro-panel/30">
             <BookOpen className="mx-auto mb-6 text-retro-muted opacity-20" size={64} />
-            <h2 className="text-2xl font-bold uppercase tracking-tighter mb-2">Your library is empty</h2>
+            <h2 className="text-2xl font-bold uppercase tracking-tighter mb-2">{t('dash.empty_title')}</h2>
             <p className="text-retro-muted font-mono mb-8 max-w-sm mx-auto">
-              Add a quick note, or create a folder to organize your jots.
+              {t('dash.empty_desc')}
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button onClick={() => navigate('/upload')} className="flex items-center gap-2">
-                <Plus size={18} /> QUICK ADD NOTE_
+                <Plus size={18} /> {t('dash.quick_add_note')}
               </Button>
               <Button variant="secondary" onClick={() => setIsCreating(true)} className="flex items-center gap-2">
-                <FolderPlus size={18} /> CREATE A FOLDER
+                <FolderPlus size={18} /> {t('dash.create_a_folder')}
               </Button>
             </div>
           </div>
         ) : courses.length === 0 ? (
           <div className="border-2 border-dashed border-retro-border p-8 text-center bg-retro-panel/20 font-mono text-sm text-retro-muted">
-            No folders yet.{' '}
-            <button onClick={() => setIsCreating(true)} className="text-retro-accent hover:underline">
-              Create one
+            {t('dash.no_folders_yet')} <button onClick={() => setIsCreating(true)} className="text-retro-accent hover:underline">
+              {t('dash.create_one')}
             </button>{' '}
-            to start organizing your notes.
+            {t('dash.start_org')}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -395,14 +396,14 @@ const Dashboard: React.FC = () => {
                         type="submit"
                         className="flex-1 flex items-center justify-center gap-1 bg-retro-accent text-retro-bg font-mono font-bold py-1.5 text-sm hover:opacity-80 transition-opacity"
                       >
-                        <Check size={14} /> SAVE
+                        <Check size={14} /> {t('dash.save')}
                       </button>
                       <button
                         type="button"
                         onClick={() => setEditingId(null)}
                         className="flex-1 flex items-center justify-center gap-1 border-2 border-retro-border text-retro-muted font-mono text-sm hover:border-retro-text hover:text-retro-text transition-colors"
                       >
-                        <X size={14} /> CANCEL
+                        <X size={14} /> {t('dash.cancel')}
                       </button>
                     </div>
                   </form>
@@ -424,7 +425,7 @@ const Dashboard: React.FC = () => {
                     <div className="mt-4 pt-4 border-t-2 border-retro-border border-dashed font-mono text-[10px] text-retro-muted flex items-center justify-between">
                       <div className="flex gap-3 items-center">
                         <span className="uppercase">{format(new Date(course.created_at), 'MMM dd, yyyy')}</span>
-                        <span className="bg-retro-accent/10 text-retro-accent px-1.5 py-0.5 border border-retro-accent/30 font-bold">{course.note_count} NOTES</span>
+                        <span className="bg-retro-accent/10 text-retro-accent px-1.5 py-0.5 border border-retro-accent/30 font-bold">{course.note_count} {t('dash.notes_count')}</span>
                       </div>
                       <div className="flex gap-1 relative z-20">
                         <button

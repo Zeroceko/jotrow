@@ -2,8 +2,10 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '../components/ui/Button';
 import { HelpCircle, ArrowLeft } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
 
 const NotFound: React.FC = () => {
+    const { t } = useLanguage();
     return (
         <div className="flex items-center justify-center min-h-[70vh] p-4 text-center">
             <div className="max-w-md w-full animate-in fade-in zoom-in duration-500">
@@ -15,10 +17,10 @@ const NotFound: React.FC = () => {
                             <span className="text-5xl font-bold text-retro-danger">404</span>
                         </div>
                         <h1 className="text-4xl font-bold uppercase tracking-tighter mb-4 italic leading-none">
-                            RESOURCE_NOT_FOUND
+                            {t('nf.title')}
                         </h1>
                         <p className="text-retro-muted font-mono text-sm leading-relaxed whitespace-pre-wrap">
-                            [!] ERROR: The page you are looking for has been moved, deleted, or never existed in this timeline.
+                            {t('nf.desc')}
                         </p>
                     </div>
 
@@ -26,13 +28,13 @@ const NotFound: React.FC = () => {
                         <Link to="/" className="block">
                             <Button className="w-full h-14 text-lg flex items-center justify-center gap-2 group shadow-solid hover:shadow-solid-accent transition-all">
                                 <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
-                                BACK_TO_SAFETY_
+                                {t('nf.back')}
                             </Button>
                         </Link>
 
                         <div className="pt-4 border-t-2 border-dashed border-retro-border mt-6">
                             <p className="text-[10px] text-retro-muted font-mono uppercase tracking-widest flex items-center justify-center gap-1">
-                                <HelpCircle size={10} /> DEBUG_INFO: UNAUTHORIZED_PATH_DETECTED
+                                <HelpCircle size={10} /> {t('nf.debug')}
                             </p>
                         </div>
                     </div>

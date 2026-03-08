@@ -38,19 +38,24 @@ interface Course {
 interface Note {
   id: number;
   title: string;
-  content: string;
+  content: string | null;
   created_at: string;
   images: string[];
   praise_count: number;
+  paps_price: number;
+  is_locked: boolean;
 }
 
 const Profile: React.FC<ProfileProps> = ({ isPublic = false }) => {
   const { username } = useParams<{ username: string }>();
   const [profile, setProfile] = useState<UserProfile | null>(null);
 
-  // Public access
-  const [isUnlocked, setIsUnlocked] = useState(false);
+  // Default we assume everything is open until they hit a locked note
   const [guestToken, setGuestToken] = useState('');
+
+  // Note Unlocking state
+  const [unlockModalOpen, setUnlockModalOpen] = useState(false);
+  const [targetUnlockNote, setTargetUnlockNote] = useState<Note | null>(null);
   const [shareCode, setShareCode] = useState('');
   const [unlockError, setUnlockError] = useState('');
   const [isUnlocking, setIsUnlocking] = useState(false);
@@ -92,6 +97,19 @@ const Profile: React.FC<ProfileProps> = ({ isPublic = false }) => {
     }
   }, [isPublic, username]);
 
+  const fetchPublicCourses = async (tokenOverride?: string) => {
+    try {
+      const headers: any = {};
+      if (tokenOverride) headers.Authorization = `Bearer ${tokenOverride}`;
+      else if (guestToken) headers.Authorization = `Bearer ${guestToken}`;
+
+      const res = await api.get('/api/courses', { headers });
+      setCourses(res.data);
+    } catch {
+      setError('Failed to fetch public courses.');
+    }
+  };
+
   const checkProfileExists = async () => {
     setIsLoading(true);
     try {
@@ -104,6 +122,8 @@ const Profile: React.FC<ProfileProps> = ({ isPublic = false }) => {
         department: res.data.department || null,
         note_count: res.data.note_count || 0,
       });
+      // Try fetching public courses
+      await fetchPublicCourses();
     } catch (err: any) {
       setError(err.response?.data?.detail || 'User not found.');
     } finally {
@@ -111,16 +131,20 @@ const Profile: React.FC<ProfileProps> = ({ isPublic = false }) => {
     }
   };
 
-  const handleUnlock = async (e: React.FormEvent) => {
+  const handleUnlockNoteWidthPin = async (e: React.FormEvent) => {
     e.preventDefault();
     setUnlockError('');
     setIsUnlocking(true);
     try {
       const res = await api.post(`/api/sharing/${username}/verify`, { share_code: shareCode });
-      const token = res.data.access_token;
-      setGuestToken(token);
-      setIsUnlocked(true);
-      fetchPublicCourses(token);
+      const newToken = res.data.access_token;
+      setGuestToken(newToken);
+      // Reload the notes of the currently expanded course to un-mask them
+      if (expandedCourseId) {
+        await reloadCourseNotes(expandedCourseId, newToken);
+      }
+      setUnlockModalOpen(false);
+      setTargetUnlockNote(null);
     } catch (err: any) {
       setUnlockError(err.response?.data?.detail || 'Invalid share code.');
     } finally {
@@ -128,18 +152,39 @@ const Profile: React.FC<ProfileProps> = ({ isPublic = false }) => {
     }
   };
 
-  const fetchPublicCourses = async (token: string) => {
-    setIsLoading(true);
-    try {
-      const res = await api.get('/api/courses', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setCourses(res.data);
-    } catch {
-      setError('Failed to fetch public courses.');
-    } finally {
-      setIsLoading(false);
+  const handleUnlockNoteWithPaps = async (note: Note) => {
+    if (!isAuthenticated) {
+      alert("Please login to pay with PAPS");
+      return;
     }
+    setUnlockError('');
+    setIsUnlocking(true);
+    try {
+      await api.post(`/api/sharing/notes/${note.id}/unlock`);
+      alert("Note unlocked successfully!");
+      if (expandedCourseId) {
+        await reloadCourseNotes(expandedCourseId);
+      }
+      setUnlockModalOpen(false);
+      setTargetUnlockNote(null);
+    } catch (err: any) {
+      if (err.response?.status === 400 && err.response?.data?.detail === "Insufficient PAPS balance") {
+        alert("You don't have enough PAPS!");
+      } else {
+        setUnlockError(err.response?.data?.detail || 'Error paying with PAPS.');
+      }
+    } finally {
+      setIsUnlocking(false);
+    }
+  };
+
+  const reloadCourseNotes = async (courseId: number, tkn?: string) => {
+    const headers: any = {};
+    if (tkn) headers.Authorization = `Bearer ${tkn}`;
+    else if (guestToken) headers.Authorization = `Bearer ${guestToken}`;
+
+    const res = await api.get(`/api/courses/${courseId}/notes`, { headers });
+    setCourseNotes(prev => ({ ...prev, [courseId]: res.data }));
   };
 
   const toggleCourseNotes = async (courseId: number) => {
@@ -241,8 +286,8 @@ const Profile: React.FC<ProfileProps> = ({ isPublic = false }) => {
   if (!isPublic) {
     return (
       <div className="p-8 text-center font-mono">
-        <h1>Private Profile Settings</h1>
-        <p className="text-retro-muted mt-4">Settings and profile management go here.</p>
+        <h1>{t('prof.private_title')}</h1>
+        <p className="text-retro-muted mt-4">{t('prof.private_desc')}</p>
       </div>
     );
   }
@@ -259,7 +304,7 @@ const Profile: React.FC<ProfileProps> = ({ isPublic = false }) => {
     return (
       <div className="flex items-center justify-center min-h-[60vh] p-4">
         <div className="border-2 border-dashed border-retro-danger p-12 text-center text-retro-danger font-mono w-full max-w-lg">
-          <h2 className="text-2xl font-bold mb-4 uppercase">System Error</h2>
+          <h2 className="text-2xl font-bold mb-4 uppercase">{t('prof.sys_error')}</h2>
           <p>{error}</p>
         </div>
       </div>
@@ -267,77 +312,6 @@ const Profile: React.FC<ProfileProps> = ({ isPublic = false }) => {
   }
 
   if (!profile) return null;
-
-  // ── Locked Screen ─────────────────────────────────────────────────────────
-
-  if (!isUnlocked) {
-    return (
-      <div className="flex items-center justify-center min-h-[calc(100vh-64px)] p-4 cursor-default">
-        <div className="w-full max-w-md animate-in zoom-in-95 duration-500">
-          <Card className="border-4 border-retro-accent shadow-[12px_12px_0px_#FFD700] relative overflow-hidden bg-retro-panel">
-            <div className="absolute top-0 left-0 w-full h-1 bg-retro-accent animate-pulse"></div>
-
-            <div className="text-center mt-6 mb-8 relative z-10">
-              <div className="mx-auto w-20 h-20 bg-retro-bg border-4 border-retro-accent flex items-center justify-center mb-6 transform -rotate-3 hover:rotate-0 transition-transform">
-                <Lock size={40} className="text-retro-accent" />
-              </div>
-              <h2 className="text-3xl font-bold uppercase tracking-tighter text-white mb-1 italic">ENCRYPTED_PROFILE</h2>
-              {profile.display_name ? (
-                <>
-                  <p className="text-retro-text font-bold font-mono text-base">{profile.display_name}</p>
-                  <p className="text-retro-muted font-mono text-xs mt-0.5">@{profile.username}</p>
-                </>
-              ) : (
-                <p className="text-retro-muted font-mono text-sm">
-                  Target: <span className="text-retro-accent underline decoration-dotted underline-offset-4">@{profile.username}</span>
-                </p>
-              )}
-              {(profile.university || profile.department) && (
-                <p className="text-retro-muted font-mono text-xs mt-2 flex items-center justify-center gap-1">
-                  🎓 {[profile.university, profile.department].filter(Boolean).join(' · ')}
-                </p>
-              )}
-            </div>
-
-            <form onSubmit={handleUnlock} className="space-y-8 relative z-10 px-2 pb-4">
-              {unlockError && (
-                <div className="text-retro-danger font-mono text-center text-xs border-2 border-retro-danger p-3 bg-retro-danger/10 animate-bounce">
-                  [!] ERROR: {unlockError}
-                </div>
-              )}
-              <div className="relative">
-                <Input
-                  type="text"
-                  placeholder="0000"
-                  value={shareCode}
-                  onChange={(e) => setShareCode(e.target.value.slice(0, 4).toUpperCase())}
-                  maxLength={4}
-                  required
-                  autoComplete="off"
-                  className="text-center text-5xl tracking-[0.5em] indent-[0.25em] font-bold py-6 bg-retro-bg/50 border-4 border-retro-border focus:border-retro-accent transition-all"
-                />
-                <div className="absolute -top-3 left-6 bg-retro-panel px-2 text-[10px] font-bold text-retro-muted tracking-widest uppercase">
-                  ENTER 4-DIGIT PIN
-                </div>
-              </div>
-
-              <Button type="submit" className="w-full h-16 text-xl relative overflow-hidden group" disabled={isUnlocking}>
-                <span className="relative z-10 flex items-center justify-center gap-3">
-                  {isUnlocking ? <Loader2 className="animate-spin" size={24} /> : <Unlock size={24} />}
-                  {isUnlocking ? 'DECRYPTING...' : 'DECRYPT_ACCESS'}
-                </span>
-                <div className="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform"></div>
-              </Button>
-            </form>
-
-            <p className="text-center text-[10px] text-retro-muted font-mono mt-4 opacity-50 uppercase tracking-widest pb-2">
-              Unauthorized access is logged. JOTROW Security Protocol v1.4
-            </p>
-          </Card>
-        </div>
-      </div>
-    );
-  }
 
   // ── Unlocked Public View ──────────────────────────────────────────────────
 
@@ -383,10 +357,10 @@ const Profile: React.FC<ProfileProps> = ({ isPublic = false }) => {
           <div className="flex-1 min-w-0">
             <div className="inline-flex items-center gap-2 bg-retro-accent/10 text-retro-accent font-bold font-mono px-3 py-1 mb-4 text-xs uppercase border border-retro-accent/30 tracking-widest">
               <Unlock size={12} />
-              PUBLIC READ-ONLY ACCESS_
+              {t('prof.read_only')}
             </div>
             <h1 className="text-5xl md:text-6xl font-bold uppercase tracking-tighter leading-none">
-              {profile.display_name || profile.username}<span className="text-retro-accent">'s</span> <br />Library.
+              {profile.display_name || profile.username}<span className="text-retro-accent">{t('prof.library')}</span>
             </h1>
             {profile.display_name && (
               <p className="text-retro-muted font-mono text-sm mt-1">@{profile.username}</p>
@@ -404,12 +378,12 @@ const Profile: React.FC<ProfileProps> = ({ isPublic = false }) => {
           </div>
           <div className="flex gap-6 flex-shrink-0 items-end">
             <div className="text-right font-mono">
-              <div className="text-xs text-retro-muted uppercase tracking-tighter">COURSES</div>
+              <div className="text-xs text-retro-muted uppercase tracking-tighter">{t('prof.courses')}</div>
               <div className="text-2xl font-bold text-retro-accent">{courses.length}</div>
             </div>
             {profile.note_count !== undefined && (
               <div className="text-right font-mono">
-                <div className="text-xs text-retro-muted uppercase tracking-tighter">NOTES</div>
+                <div className="text-xs text-retro-muted uppercase tracking-tighter">{t('prof.notes')}</div>
                 <div className="text-2xl font-bold text-retro-accent">{profile.note_count}</div>
               </div>
             )}
@@ -433,7 +407,7 @@ const Profile: React.FC<ProfileProps> = ({ isPublic = false }) => {
         ) : courses.length === 0 ? (
           <div className="border-2 border-dashed border-retro-border p-12 text-center text-retro-muted font-mono">
             <BookOpen className="mx-auto mb-4 opacity-50" size={48} />
-            <p>NO PUBLIC COURSES FOUND.</p>
+            <p>{t('prof.no_courses')}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-6">
@@ -455,7 +429,7 @@ const Profile: React.FC<ProfileProps> = ({ isPublic = false }) => {
                           {course.title}
                         </h3>
                         <span className="bg-retro-border/50 text-retro-text text-xs px-2 py-0.5 font-mono">
-                          {course.note_count} NOTES
+                          {course.note_count} {t('prof.notes')}
                         </span>
                       </div>
                       {course.description && (
@@ -482,7 +456,7 @@ const Profile: React.FC<ProfileProps> = ({ isPublic = false }) => {
                         </div>
                       ) : !notes || notes.length === 0 ? (
                         <p className="text-retro-muted font-mono text-sm text-center py-4">
-                          NO NOTES IN THIS COURSE.
+                          {t('prof.no_notes')}
                         </p>
                       ) : (
                         notes.map(note => (
@@ -524,14 +498,14 @@ const Profile: React.FC<ProfileProps> = ({ isPublic = false }) => {
                                       onClick={(e) => { e.stopPropagation(); openSaveModal(note.id); }}
                                       className="flex items-center gap-2 text-xs font-bold font-mono px-3 py-1 border-2 border-retro-text text-retro-text hover:bg-retro-text hover:text-retro-bg transition-colors"
                                     >
-                                      <Bookmark size={14} /> SAVE_
+                                      <Bookmark size={14} /> {t('prof.save')}
                                     </button>
                                   )}
                                   <button
                                     onClick={(e) => { e.stopPropagation(); handlePraise(course.id, note.id); }}
                                     className="flex items-center gap-2 text-xs font-bold font-mono px-3 py-1 border-2 border-retro-accent text-retro-accent hover:bg-retro-accent hover:text-retro-bg transition-colors"
                                   >
-                                    <span>🙌</span> PRAISE_ {note.praise_count > 0 && `(${note.praise_count})`}
+                                    <span>🙌</span> {t('prof.praise')} {note.praise_count > 0 && `(${note.praise_count})`}
                                   </button>
                                 </div>
                               </div>
@@ -548,6 +522,74 @@ const Profile: React.FC<ProfileProps> = ({ isPublic = false }) => {
         )}
       </div>
 
+      {/* Unlock Modal */}
+      {unlockModalOpen && targetUnlockNote && (
+        <div className="fixed inset-0 z-[60] bg-black/90 flex items-center justify-center p-4">
+          <Card className="max-w-md w-full border-4 border-retro-accent shadow-[8px_8px_0px_#FFD700] relative bg-retro-panel overflow-hidden">
+            <button
+              onClick={() => { setUnlockModalOpen(false); setTargetUnlockNote(null); }}
+              className="absolute top-4 right-4 text-retro-muted hover:text-white z-10"
+            >
+              <X size={24} />
+            </button>
+            <div className="text-center mb-6 mt-4">
+              <Lock className="mx-auto text-retro-accent mb-2" size={32} />
+              <h2 className="text-2xl font-bold uppercase tracking-widest text-white">Unlock Note</h2>
+              <p className="text-retro-accent font-mono text-sm mt-1 truncate px-8">{targetUnlockNote.title}</p>
+            </div>
+
+            {unlockError && (
+              <div className="text-retro-danger font-mono text-center text-xs border-2 border-retro-danger p-2 bg-retro-danger/10 mb-4">
+                {unlockError}
+              </div>
+            )}
+
+            <div className="space-y-6">
+              {/* Option 1: PAPS */}
+              <div className="border-2 border-dashed border-retro-border p-4 bg-retro-bg">
+                <h3 className="font-bold text-sm text-retro-muted uppercase tracking-wider mb-3">Option 1: Pay with PAPS</h3>
+                <Button
+                  onClick={() => handleUnlockNoteWithPaps(targetUnlockNote)}
+                  className="w-full flex items-center justify-center gap-2"
+                  disabled={isUnlocking}
+                >
+                  <Unlock size={16} /> Pay {targetUnlockNote.paps_price} PAPS
+                </Button>
+                {!isAuthenticated && (
+                  <p className="text-[10px] text-center mt-2 text-retro-danger font-mono uppercase">Requires Login</p>
+                )}
+              </div>
+
+              <div className="text-center font-mono text-xs text-retro-muted uppercase">— OR —</div>
+
+              {/* Option 2: PIN */}
+              <div className="border-2 border-dashed border-retro-border p-4 bg-retro-bg">
+                <h3 className="font-bold text-sm text-retro-muted uppercase tracking-wider mb-3">Option 2: Enter Author's PIN</h3>
+                <form onSubmit={handleUnlockNoteWidthPin} className="space-y-3">
+                  <Input
+                    type="text"
+                    placeholder="0000"
+                    value={shareCode}
+                    onChange={(e) => setShareCode(e.target.value.slice(0, 4).toUpperCase())}
+                    maxLength={4}
+                    required
+                    className="text-center text-xl tracking-[0.5em] font-bold py-3"
+                  />
+                  <Button
+                    type="submit"
+                    className="w-full"
+                    variant="ghost"
+                    disabled={isUnlocking || shareCode.length < 4}
+                  >
+                    {isUnlocking ? <Loader2 size={16} className="animate-spin relative left-auto" /> : "Verify PIN"}
+                  </Button>
+                </form>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
+
       {/* Save Note Modal */}
       {saveModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
@@ -558,17 +600,17 @@ const Profile: React.FC<ProfileProps> = ({ isPublic = false }) => {
             >
               <X size={24} />
             </button>
-            <h2 className="text-2xl font-bold uppercase tracking-tight mb-6">Save Note_</h2>
+            <h2 className="text-2xl font-bold uppercase tracking-tight mb-6">{t('prof.save_note_title')}</h2>
 
             {userCourses.length === 0 ? (
               <div className="text-retro-muted font-mono text-center py-4">
-                You don't have any courses to save this note to.
+                {t('prof.no_save_course')}
               </div>
             ) : (
               <div className="space-y-4">
                 <div className="flex flex-col w-full">
                   <label className="mb-2 text-sm font-bold text-retro-muted tracking-widest uppercase">
-                    Select Course
+                    {t('prof.select_course')}
                   </label>
                   <div className="relative border-2 border-retro-border bg-retro-bg">
                     <select
@@ -594,7 +636,7 @@ const Profile: React.FC<ProfileProps> = ({ isPublic = false }) => {
                     onClick={() => setSaveModalOpen(false)}
                     disabled={isSaving}
                   >
-                    CANCEL
+                    {t('prof.cancel')}
                   </Button>
                   <Button
                     onClick={handleSaveNote}
@@ -602,7 +644,7 @@ const Profile: React.FC<ProfileProps> = ({ isPublic = false }) => {
                     className="flex items-center gap-2"
                   >
                     {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Bookmark size={16} />}
-                    {isSaving ? 'SAVING...' : 'SAVE TO COURSE'}
+                    {isSaving ? t('prof.saving') : t('prof.save_to')}
                   </Button>
                 </div>
               </div>

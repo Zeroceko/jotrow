@@ -6,6 +6,7 @@ import { Card } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
 import { Loader2, User as UserIcon, Mail, ShieldCheck } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
 
 const Register: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -17,6 +18,7 @@ const Register: React.FC = () => {
 
   const { login } = useAuth();
   const navigate = useNavigate();
+  const { t } = useLanguage();
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,7 +34,7 @@ const Register: React.FC = () => {
       login(response.data.access_token);
       setStep('username');
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Registration failed. Check your details.');
+      setError(err.response?.data?.detail || t('reg.fail'));
     } finally {
       setIsLoading(false);
     }
@@ -47,7 +49,7 @@ const Register: React.FC = () => {
       await api.put('/auth/me', { username });
       navigate('/');
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to set username.');
+      setError(err.response?.data?.detail || t('reg.fail_user'));
     } finally {
       setIsLoading(false);
     }
@@ -61,20 +63,20 @@ const Register: React.FC = () => {
       <div className="flex items-center justify-center min-h-[calc(100vh-64px)] p-4 animate-in slide-in-from-right duration-500">
         <Card className="w-full max-w-md">
           <div className="mb-8">
-            <h2 className="text-3xl font-bold uppercase tracking-tight mb-2">PICK_A_HANDLE<span className="text-retro-accent">_</span></h2>
-            <p className="text-retro-muted font-mono text-sm leading-relaxed">Choose how you will be identified in the JOTROW network.</p>
+            <h2 className="text-3xl font-bold uppercase tracking-tight mb-2">{t('reg.title_step2')}<span className="text-retro-accent">_</span></h2>
+            <p className="text-retro-muted font-mono text-sm leading-relaxed">{t('reg.subtitle_step2')}</p>
           </div>
 
           {error && (
             <div className="bg-retro-danger/20 border-2 border-retro-danger text-retro-danger p-3 mb-6 font-mono text-sm">
-              ERROR: {error}
+              {t('login.error_prefix')} {error}
             </div>
           )}
 
           <form onSubmit={handlePickUsername} className="space-y-8">
             <div className="relative">
               <Input
-                label="USERNAME"
+                label={t('reg.user_label')}
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
@@ -94,11 +96,11 @@ const Register: React.FC = () => {
               disabled={isLoading || !username}
             >
               {isLoading && <Loader2 className="animate-spin" size={20} />}
-              {isLoading ? 'ESTABLISHING...' : 'FINALIZE_IDENTITIES'}
+              {isLoading ? t('reg.establishing') : t('reg.finalize')}
             </Button>
 
             <p className="text-center text-[10px] text-retro-muted font-mono uppercase tracking-widest opacity-50">
-              Identity can be modified later in settings.
+              {t('reg.modify_later')}
             </p>
           </form>
         </Card>
@@ -111,20 +113,20 @@ const Register: React.FC = () => {
     <div className="flex items-center justify-center min-h-[calc(100vh-64px)] p-4">
       <Card className="w-full max-w-md animate-in fade-in duration-700">
         <div className="mb-8">
-          <h2 className="text-4xl font-bold uppercase tracking-tighter mb-2 italic">JOIN_US<span className="text-retro-accent">.</span></h2>
-          <p className="text-retro-muted font-mono text-xs uppercase tracking-[0.2em]">Initialize new user sequence.</p>
+          <h2 className="text-4xl font-bold uppercase tracking-tighter mb-2 italic">{t('reg.title_step1')}<span className="text-retro-accent">.</span></h2>
+          <p className="text-retro-muted font-mono text-xs uppercase tracking-[0.2em]">{t('reg.subtitle_step1')}</p>
         </div>
 
         {error && (
           <div className="bg-retro-danger/20 border-2 border-retro-danger text-retro-danger p-3 mb-6 font-mono text-sm">
-            ERROR: {error}
+            {t('login.error_prefix')} {error}
           </div>
         )}
 
         <form onSubmit={handleRegister} className="space-y-6">
           <div className="relative">
             <Input
-              label="EMAIL_ADDRESS"
+              label={t('reg.email_label')}
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -137,7 +139,7 @@ const Register: React.FC = () => {
 
           <div className="relative">
             <Input
-              label="ACCESS_PASSWORD"
+              label={t('reg.pwd_label')}
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -155,14 +157,14 @@ const Register: React.FC = () => {
             disabled={isLoading}
           >
             {isLoading && <Loader2 className="animate-spin" size={20} />}
-            {isLoading ? 'INITIALIZING...' : 'START_MISSION_'}
+            {isLoading ? t('reg.initializing') : t('reg.start')}
           </Button>
         </form>
 
         <div className="mt-8 pt-6 border-t-2 border-retro-border text-center font-mono text-xs">
-          <span className="text-retro-muted uppercase opacity-70">Already established? </span>
+          <span className="text-retro-muted uppercase opacity-70">{t('reg.already')} </span>
           <Link to="/login" className="text-retro-accent hover:underline decoration-2 underline-offset-4 font-bold ml-1">
-            LOGIN_HERE
+            {t('reg.login')}
           </Link>
         </div>
       </Card>

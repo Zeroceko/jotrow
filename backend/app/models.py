@@ -50,11 +50,23 @@ class Note(Base):
     praise_count = Column(Integer, default=0)
     original_author = Column(String, nullable=True)
     visibility = Column(String, default="private")  # "private" | "public"
+    paps_price = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     course = relationship("Course", back_populates="notes")
     images = relationship("NoteImage", back_populates="note")
     owner = relationship("User", back_populates="notes_root", foreign_keys=[owner_id])
+    unlocked_by = relationship("UnlockedNote", back_populates="note")
+
+class UnlockedNote(Base):
+    __tablename__ = "unlocked_notes"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    note_id = Column(Integer, ForeignKey("notes.id"), nullable=False, index=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    user = relationship("User", foreign_keys=[user_id])
+    note = relationship("Note", back_populates="unlocked_by")
 
 class NoteImage(Base):
     __tablename__ = "note_images"

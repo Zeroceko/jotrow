@@ -37,12 +37,19 @@ def get_current_user(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Could not validate credentials",
         )
-    # Support both regular tokens ("123") and guest tokens ("guest:123")
+    # Support both regular tokens ("123") and guest tokens ("guest:123" or "guest:123:code")
+    provided_share_code = None
     if isinstance(token_sub, str) and token_sub.startswith("guest:"):
-        user_id = int(token_sub.split(":", 1)[1])
+        parts = token_sub.split(":")
+        user_id = int(parts[1])
+        if len(parts) > 2:
+            provided_share_code = parts[2]
     else:
         user_id = int(token_sub)
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+    
+    # Attach for downstream use
+    setattr(user, "guest_share_code", provided_share_code)
     return user

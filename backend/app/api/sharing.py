@@ -131,15 +131,10 @@ def verify_share_code(
     if user.share_code != request.share_code:
         raise HTTPException(status_code=403, detail="Invalid share code")
         
-    # Create a special token that is only valid for viewing this user's public content
-    # For simplicity, we just create a normal token but we could add scopes/claims
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     
-    # We prefix sub with "guest:" to easily distunguish later if needed
-    # But for now, returning a normal token where the guest can act as the user 
-    # MIGHT be dangerous. Let's just create a read-only concept or custom claim.
-    
-    to_encode = {"exp": datetime.utcnow() + access_token_expires, "sub": f"guest:{user.id}"}
+    # We prefix sub with "guest:" and append the verified share_code to bypass paps checks
+    to_encode = {"exp": datetime.utcnow() + access_token_expires, "sub": f"guest:{user.id}:{request.share_code}"}
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
     return {
@@ -213,3 +208,63 @@ def save_note(
     db.commit()
     
     return {"message": "Note saved successfully", "note_id": new_note.id}
+
+class UnlockNoteRequest(BaseModel):
+    pass
+
+@router.post("/notes/{note_id}/unlock")
+def unlock_note(
+    note_id: int,
+    db: Session = Depends(deps.get_db),
+    current_user: models.User = Depends(deps.get_current_user)
+) -> Any:
+    """
+    Pay PAPS to unlock a specific note.
+    """
+    note = db.query(models.Note).filter(models.Note.id == note_id).first()
+    if not note:
+        raise HTTPException(status_code=404, detail="Note not found")
+        
+    if note.paps_price <= 0:
+        return {"message": "Note is already free"}
+        
+    if note.owner_id == current_user.id:
+        return {"message": "You own this note"}
+        
+    # Check if already unlocked
+    already_unlocked = db.query(models.UnlockedNote).filter(
+        models.UnlockedNote.note_id == note_id,
+        models.UnlockedNote.user_id == current_user.id
+    ).first()
+    
+    if already_unlocked:
+        return {"message": "Already unlocked"}
+        
+    if current_user.paps_balance < note.paps_price:
+        raise HTTPException(status_code=400, detail="Insufficient PAPS balance")
+        
+    # Deduct from buyer
+    current_user.paps_balance -= note.paps_price
+    db.add(models.Transaction(
+        user_id=current_user.id,
+        type="purchase",
+        amount=-note.paps_price,
+        description=f"Unlocked note: {note.title}"
+    ))
+    
+    # Add to owner
+    owner = db.query(models.User).filter(models.User.id == note.owner_id).first()
+    if owner:
+        owner.paps_balance += note.paps_price
+        db.add(models.Transaction(
+            user_id=owner.id,
+            type="sale",
+            amount=note.paps_price,
+            description=f"Someone unlocked note: {note.title}"
+        ))
+        
+    # Record unlock
+    db.add(models.UnlockedNote(user_id=current_user.id, note_id=note.id))
+    
+    db.commit()
+    return {"message": "Note unlocked successfully"}

@@ -9,6 +9,7 @@ import {
     User, ShieldCheck, Wallet, TrendingUp, Settings2,
     Loader2, Check, AlertCircle, LogOut, Lock
 } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -80,6 +81,7 @@ const typeColor: Record<string, string> = {
 const Settings: React.FC = () => {
     const { logout } = useAuth();
     const navigate = useNavigate();
+    const { t } = useLanguage();
     const [activeTab, setActiveTab] = useState<Tab>('profile');
     const [settings, setSettings] = useState<UserSettings | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -236,11 +238,11 @@ const Settings: React.FC = () => {
     };
 
     const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
-        { id: 'profile', label: 'Profile', icon: <User size={16} /> },
-        { id: 'privacy', label: 'Privacy', icon: <ShieldCheck size={16} /> },
-        { id: 'wallet', label: 'Wallet', icon: <Wallet size={16} /> },
-        { id: 'earnings', label: 'Earnings', icon: <TrendingUp size={16} /> },
-        { id: 'account', label: 'Account', icon: <Settings2 size={16} /> },
+        { id: 'profile', label: t('set.profile'), icon: <User size={16} /> },
+        { id: 'privacy', label: t('set.privacy'), icon: <ShieldCheck size={16} /> },
+        { id: 'wallet', label: t('set.wallet'), icon: <Wallet size={16} /> },
+        { id: 'earnings', label: t('set.earnings'), icon: <TrendingUp size={16} /> },
+        { id: 'account', label: t('set.account'), icon: <Settings2 size={16} /> },
     ];
 
     if (isLoading) {
@@ -255,7 +257,7 @@ const Settings: React.FC = () => {
         <div className="p-4 md:p-8 max-w-6xl mx-auto animate-in fade-in duration-300">
             <div className="mb-8">
                 <h1 className="text-4xl font-bold uppercase tracking-tighter">
-                    Settings<span className="text-retro-accent">_</span>
+                    {t('set.title')}<span className="text-retro-accent">_</span>
                 </h1>
                 {settings && (
                     <p className="text-retro-muted font-mono text-sm mt-1">
@@ -292,61 +294,61 @@ const Settings: React.FC = () => {
                     {activeTab === 'profile' && (
                         <div className="space-y-6">
                             <Card>
-                                <SectionTitle>Public Profile</SectionTitle>
+                                <SectionTitle>{t('set.public_profile')}</SectionTitle>
                                 <form onSubmit={handleSaveProfile} className="space-y-5">
                                     <Input
-                                        label="Display Name"
+                                        label={t('set.display_name')}
                                         value={displayName}
                                         onChange={e => setDisplayName(e.target.value)}
-                                        placeholder="Your full name or alias"
+                                        placeholder={t('set.name_placeholder')}
                                     />
                                     <div className="flex flex-col w-full">
-                                        <label className="mb-2 text-sm font-bold text-retro-muted tracking-widest uppercase">Bio</label>
+                                        <label className="mb-2 text-sm font-bold text-retro-muted tracking-widest uppercase">{t('set.bio')}</label>
                                         <textarea
                                             className="bg-retro-bg text-retro-text border-2 border-retro-border py-3 px-4 font-mono outline-none focus:border-retro-accent min-h-[100px] resize-y"
                                             value={bio}
                                             onChange={e => setBio(e.target.value)}
-                                            placeholder="A short description about you..."
+                                            placeholder={t('set.bio_placeholder')}
                                             maxLength={280}
                                         />
                                         <span className="text-right text-xs text-retro-muted font-mono mt-1">{bio.length}/280</span>
                                     </div>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <Input
-                                            label="University"
+                                            label={t('set.university')}
                                             value={university}
                                             onChange={e => setUniversity(e.target.value)}
-                                            placeholder="e.g. MIT"
+                                            placeholder={t('set.uni_placeholder')}
                                         />
                                         <Input
-                                            label="Department"
+                                            label={t('set.department')}
                                             value={department}
                                             onChange={e => setDepartment(e.target.value)}
-                                            placeholder="e.g. Computer Science"
+                                            placeholder={t('set.dept_placeholder')}
                                         />
                                     </div>
                                     {profileMsg && <StatusMessage msg={profileMsg.text} type={profileMsg.type} />}
                                     <Button type="submit" disabled={profileLoading} className="w-full sm:w-auto">
-                                        {profileLoading ? <><Loader2 size={14} className="animate-spin inline mr-2" />SAVING...</> : 'SAVE PROFILE_'}
+                                        {profileLoading ? <><Loader2 size={14} className="animate-spin inline mr-2" />{t('set.saving')}</> : t('set.save_profile')}
                                     </Button>
                                 </form>
                             </Card>
 
                             <Card>
-                                <SectionTitle>Share PIN (4-digit Code)</SectionTitle>
+                                <SectionTitle>{t('set.share_pin')}</SectionTitle>
                                 <p className="text-retro-muted font-mono text-sm mb-5">
-                                    Your PIN is what others enter to access your public profile at{' '}
+                                    {t('set.pin_desc1')}{' '}
                                     <span className="text-retro-text">/u/{settings?.username}</span>.
                                     {settings?.share_code && (
                                         <span className="ml-2 inline-flex items-center gap-1">
-                                            Current: <span className="text-retro-accent font-bold tracking-widest">{settings.share_code}</span>
+                                            {t('set.current')} <span className="text-retro-accent font-bold tracking-widest">{settings.share_code}</span>
                                         </span>
                                     )}
                                 </p>
                                 <form onSubmit={handleSavePin} className="flex flex-col sm:flex-row gap-4 items-start">
                                     <div className="w-full sm:w-40">
                                         <Input
-                                            label="New PIN"
+                                            label={t('set.new_pin')}
                                             value={pin}
                                             onChange={e => setPin(e.target.value.slice(0, 4).toUpperCase())}
                                             maxLength={4}
@@ -357,7 +359,7 @@ const Settings: React.FC = () => {
                                     <div className="pt-7">
                                         <Button type="submit" disabled={pinLoading || pin.length !== 4}>
                                             {pinLoading ? <Loader2 size={14} className="animate-spin inline mr-2" /> : <Lock size={14} className="inline mr-2" />}
-                                            SET PIN_
+                                            {t('set.set_pin')}
                                         </Button>
                                     </div>
                                 </form>
@@ -369,11 +371,11 @@ const Settings: React.FC = () => {
                     {/* ── Privacy Tab ── */}
                     {activeTab === 'privacy' && (
                         <Card>
-                            <SectionTitle>Privacy & Visibility</SectionTitle>
+                            <SectionTitle>{t('set.privacy_visibility')}</SectionTitle>
                             <div className="space-y-8">
                                 <div>
                                     <label className="text-sm font-bold text-retro-muted tracking-widest uppercase block mb-3">
-                                        Default Note Visibility
+                                        {t('set.default_visibility')}
                                     </label>
                                     <div className="flex gap-3">
                                         {(['private', 'public'] as const).map(v => (
@@ -385,14 +387,14 @@ const Settings: React.FC = () => {
                                                     : 'border-retro-border text-retro-muted hover:border-retro-text hover:text-retro-text'
                                                     }`}
                                             >
-                                                {v === 'private' ? '🔒 Private' : '🌐 Public'}
+                                                {v === 'private' ? t('set.private') : t('set.public')}
                                             </button>
                                         ))}
                                     </div>
                                     <p className="text-retro-muted font-mono text-xs mt-3">
                                         {defaultVisibility === 'private'
-                                            ? 'New notes will only be visible to you and users with your PIN.'
-                                            : 'New notes will be publicly visible and discoverable.'}
+                                            ? t('set.private_desc')
+                                            : t('set.public_desc')}
                                     </p>
                                 </div>
 
@@ -400,10 +402,10 @@ const Settings: React.FC = () => {
                                     <div className="flex items-center justify-between">
                                         <div>
                                             <label className="text-sm font-bold text-retro-muted tracking-widest uppercase block mb-1">
-                                                Show on Explore
+                                                {t('set.show_explore')}
                                             </label>
                                             <p className="text-retro-muted font-mono text-xs">
-                                                Allow your profile to appear in the Explore / Featured section.
+                                                {t('set.explore_desc')}
                                             </p>
                                         </div>
                                         <button
@@ -419,7 +421,7 @@ const Settings: React.FC = () => {
 
                                 {privacyMsg && <StatusMessage msg={privacyMsg.text} type={privacyMsg.type} />}
                                 <Button onClick={handleSavePrivacy} disabled={privacyLoading} className="w-full sm:w-auto">
-                                    {privacyLoading ? <><Loader2 size={14} className="animate-spin inline mr-2" />SAVING...</> : 'SAVE PRIVACY_'}
+                                    {privacyLoading ? <><Loader2 size={14} className="animate-spin inline mr-2" />{t('set.saving')}</> : t('set.save_privacy')}
                                 </Button>
                             </div>
                         </Card>
@@ -429,10 +431,10 @@ const Settings: React.FC = () => {
                     {activeTab === 'wallet' && (
                         <div className="space-y-6">
                             <Card>
-                                <SectionTitle>PAPS Balance</SectionTitle>
+                                <SectionTitle>{t('set.paps_balance')}</SectionTitle>
                                 <div className="flex items-end gap-4">
                                     <div>
-                                        <div className="text-retro-muted font-mono text-xs uppercase tracking-wider mb-1">Available</div>
+                                        <div className="text-retro-muted font-mono text-xs uppercase tracking-wider mb-1">{t('set.available')}</div>
                                         <div className="text-5xl font-bold text-retro-accent font-mono">
                                             {walletData?.balance ?? settings?.paps_balance ?? 0}
                                             <span className="text-xl ml-2 text-retro-muted">PAPS</span>
@@ -442,13 +444,13 @@ const Settings: React.FC = () => {
                             </Card>
 
                             <Card>
-                                <SectionTitle>Transaction History</SectionTitle>
+                                <SectionTitle>{t('set.tx_history')}</SectionTitle>
                                 {!walletData ? (
                                     <div className="flex justify-center py-8"><Loader2 className="animate-spin text-retro-accent" size={24} /></div>
                                 ) : walletData.transactions.length === 0 ? (
                                     <div className="text-center py-12 text-retro-muted font-mono">
                                         <Wallet size={40} className="mx-auto mb-4 opacity-30" />
-                                        <p className="text-sm">NO TRANSACTIONS YET.</p>
+                                        <p className="text-sm">{t('set.no_tx')}</p>
                                     </div>
                                 ) : (
                                     <ul className="divide-y-2 divide-retro-border">
@@ -479,16 +481,16 @@ const Settings: React.FC = () => {
                     {/* ── Earnings Tab ── */}
                     {activeTab === 'earnings' && (
                         <Card>
-                            <SectionTitle>This Week's Earnings</SectionTitle>
+                            <SectionTitle>{t('set.this_week')}</SectionTitle>
                             {!earningsData ? (
                                 <div className="flex justify-center py-8"><Loader2 className="animate-spin text-retro-accent" size={24} /></div>
                             ) : (
                                 <div className="space-y-6">
                                     <div className="grid grid-cols-3 gap-4">
                                         {[
-                                            { label: 'Earned', value: earningsData.earned, color: 'text-retro-accent' },
-                                            { label: 'Spent', value: earningsData.spent, color: 'text-retro-danger' },
-                                            { label: 'Net', value: earningsData.net, color: earningsData.net >= 0 ? 'text-retro-accent' : 'text-retro-danger' },
+                                            { label: t('set.earned'), value: earningsData.earned, color: 'text-retro-accent' },
+                                            { label: t('set.spent'), value: earningsData.spent, color: 'text-retro-danger' },
+                                            { label: t('set.net'), value: earningsData.net, color: earningsData.net >= 0 ? 'text-retro-accent' : 'text-retro-danger' },
                                         ].map(({ label, value, color }) => (
                                             <div key={label} className="border-2 border-retro-border p-4 text-center">
                                                 <div className="text-retro-muted font-mono text-xs uppercase tracking-wider mb-2">{label}</div>
@@ -500,13 +502,13 @@ const Settings: React.FC = () => {
                                         ))}
                                     </div>
                                     <p className="text-retro-muted font-mono text-xs text-center">
-                                        Week of {new Date(earningsData.week_start).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
+                                        {t('set.week_of')} {new Date(earningsData.week_start).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
                                         {' '}– {new Date(earningsData.week_end).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
                                     </p>
                                     {earningsData.earned === 0 && earningsData.spent === 0 && (
                                         <div className="text-center border-2 border-dashed border-retro-border p-8 text-retro-muted font-mono text-sm">
                                             <TrendingUp size={32} className="mx-auto mb-3 opacity-30" />
-                                            No activity this week yet.
+                                            {t('set.no_activity')}
                                         </div>
                                     )}
                                 </div>
@@ -518,13 +520,13 @@ const Settings: React.FC = () => {
                     {activeTab === 'account' && (
                         <div className="space-y-6">
                             <Card>
-                                <SectionTitle>Change Email</SectionTitle>
+                                <SectionTitle>{t('set.change_email')}</SectionTitle>
                                 <form onSubmit={handleChangeEmail} className="space-y-4">
                                     <div className="text-retro-muted font-mono text-sm mb-2">
-                                        Current: <span className="text-retro-text">{settings?.email}</span>
+                                        {t('set.current')} <span className="text-retro-text">{settings?.email}</span>
                                     </div>
                                     <Input
-                                        label="New Email"
+                                        label={t('set.new_email')}
                                         type="email"
                                         value={newEmail}
                                         onChange={e => setNewEmail(e.target.value)}
@@ -532,33 +534,33 @@ const Settings: React.FC = () => {
                                         placeholder="new@email.com"
                                     />
                                     <Input
-                                        label="Current Password"
+                                        label={t('set.current_pwd')}
                                         type="password"
                                         value={emailPassword}
                                         onChange={e => setEmailPassword(e.target.value)}
                                         required
-                                        placeholder="Confirm with your password"
+                                        placeholder=""
                                     />
                                     {emailMsg && <StatusMessage msg={emailMsg.text} type={emailMsg.type} />}
                                     <Button type="submit" disabled={emailLoading}>
-                                        {emailLoading ? <><Loader2 size={14} className="animate-spin inline mr-2" />SAVING...</> : 'UPDATE EMAIL_'}
+                                        {emailLoading ? <><Loader2 size={14} className="animate-spin inline mr-2" />{t('set.saving')}</> : t('set.update_email')}
                                     </Button>
                                 </form>
                             </Card>
 
                             <Card>
-                                <SectionTitle>Change Password</SectionTitle>
+                                <SectionTitle>{t('set.change_pwd')}</SectionTitle>
                                 <form onSubmit={handleChangePassword} className="space-y-4">
                                     <Input
-                                        label="Current Password"
+                                        label={t('set.current_pwd')}
                                         type="password"
                                         value={currentPassword}
                                         onChange={e => setCurrentPassword(e.target.value)}
                                         required
-                                        placeholder="Enter current password"
+                                        placeholder=""
                                     />
                                     <Input
-                                        label="New Password"
+                                        label={t('set.new_pwd')}
                                         type="password"
                                         value={newPassword}
                                         onChange={e => setNewPassword(e.target.value)}
@@ -566,7 +568,7 @@ const Settings: React.FC = () => {
                                         placeholder="Min. 6 characters"
                                     />
                                     <Input
-                                        label="Confirm New Password"
+                                        label={t('set.confirm_pwd')}
                                         type="password"
                                         value={confirmPassword}
                                         onChange={e => setConfirmPassword(e.target.value)}
@@ -575,15 +577,15 @@ const Settings: React.FC = () => {
                                     />
                                     {passwordMsg && <StatusMessage msg={passwordMsg.text} type={passwordMsg.type} />}
                                     <Button type="submit" disabled={passwordLoading}>
-                                        {passwordLoading ? <><Loader2 size={14} className="animate-spin inline mr-2" />SAVING...</> : 'UPDATE PASSWORD_'}
+                                        {passwordLoading ? <><Loader2 size={14} className="animate-spin inline mr-2" />{t('set.saving')}</> : t('set.update_pwd')}
                                     </Button>
                                 </form>
                             </Card>
 
                             <Card>
-                                <SectionTitle>Session</SectionTitle>
+                                <SectionTitle>{t('set.session')}</SectionTitle>
                                 <Button variant="danger" onClick={handleLogout} className="flex items-center gap-2">
-                                    <LogOut size={16} /> LOGOUT_
+                                    <LogOut size={16} /> {t('set.logout')}
                                 </Button>
                             </Card>
                         </div>

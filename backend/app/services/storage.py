@@ -52,11 +52,37 @@ def ensure_bucket_exists():
 def upload_file_to_minio(file_data, file_name: str, content_type: str) -> str:
     ensure_bucket_exists()
 
-    # Convert HEIC/HEIF to JPEG for browser compatibility
-    if _is_heic(file_name, content_type):
-        file_data, suffix, content_type = _convert_heic_to_jpeg(file_data)
+    # Always process the image through Pillow for compression and format standardization
+    try:
+        # If it's HEIC, the pillow_heif opener handles it automatically when Image.open is called
+        img = Image.open(file_data)
+        
+        # Convert to RGB if needed
+        if img.mode in ("RGBA", "P"):
+            img = img.convert("RGB")
+            
+        # Resize if dimensions exceed 1200px (maintain aspect ratio)
+        max_size = (1200, 1200)
+        img.thumbnail(max_size, Image.Resampling.LANCZOS)
+        
+        # Save to buffer with compression
+        buf = io.BytesIO()
+        img.save(buf, format="JPEG", quality=70)
+        buf.seek(0)
+        
+        # Override file details for the compressed chunk
+        file_data = buf
+        content_type = "image/jpeg"
         base_name = os.path.splitext(file_name)[0]
-        file_name = base_name + suffix
+        file_name = base_name + ".jpg"
+        file_length = buf.getbuffer().nbytes
+    except Exception as e:
+        print(f"Error compressing image {file_name}: {e}")
+        # If Pillow fails (not an image, etc.), fallback to calculating read size
+        file_data.seek(0, os.SEEK_END)
+        file_length = file_data.tell()
+        file_data.seek(0)
+
 
     unique_file_name = f"{uuid.uuid4()}_{file_name}"
 
@@ -64,7 +90,7 @@ def upload_file_to_minio(file_data, file_name: str, content_type: str) -> str:
         settings.MINIO_BUCKET_NAME,
         unique_file_name,
         file_data,
-        length=-1,
+        length=file_length,
         part_size=10*1024*1024,
         content_type=content_type,
     )

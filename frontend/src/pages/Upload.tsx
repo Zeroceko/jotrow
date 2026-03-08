@@ -5,6 +5,7 @@ import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Upload as UploadIcon, X, ArrowLeft } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
 
 interface Course {
   id: number;
@@ -16,6 +17,7 @@ const Upload: React.FC = () => {
   const [selectedCourse, setSelectedCourse] = useState<string>('');
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
+  const [papsPrice, setPapsPrice] = useState<number>(0);
   const [files, setFiles] = useState<File[]>([]);
 
   const [isLoading, setIsLoading] = useState(false);
@@ -24,6 +26,7 @@ const Upload: React.FC = () => {
 
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useLanguage();
 
   useEffect(() => {
     const fetchCourses = async () => {
@@ -90,6 +93,7 @@ const Upload: React.FC = () => {
       }
       formData.append('title', title);
       formData.append('content', content);
+      formData.append('paps_price', papsPrice.toString());
 
       files.forEach(file => {
         formData.append('files', file);
@@ -123,9 +127,9 @@ const Upload: React.FC = () => {
     <div className="p-4 md:p-8 max-w-4xl mx-auto">
       <div className="mb-8">
         <Link to="/" className="inline-flex items-center gap-2 text-retro-muted hover:text-retro-text hover:-translate-x-1 transition-transform font-mono text-sm mb-4">
-          <ArrowLeft size={16} /> RETURN TO DASHBOARD
+          <ArrowLeft size={16} /> {t('upload.return')}
         </Link>
-        <h1 className="text-4xl font-bold uppercase tracking-tighter">Upload Note<span className="text-retro-accent">_</span></h1>
+        <h1 className="text-4xl font-bold uppercase tracking-tighter">{t('upload.page_title')}<span className="text-retro-accent">_</span></h1>
       </div>
 
       <Card>
@@ -138,14 +142,14 @@ const Upload: React.FC = () => {
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="flex flex-col w-full">
             <label className="mb-2 text-sm font-bold text-retro-muted tracking-widest uppercase">
-              SELECT COURSE
+              {t('upload.select_course')}
             </label>
             <select
               className="bg-retro-bg text-retro-text border-2 border-retro-border py-3 px-4 font-mono outline-none focus:border-retro-accent focus:shadow-solid-accent appearance-none cursor-pointer"
               value={selectedCourse}
               onChange={(e) => setSelectedCourse(e.target.value)}
             >
-              <option value="">-- ADD TO LIBRARY (no folder) --</option>
+              <option value="">{t('upload.no_folder')}</option>
               {courses.map(course => (
                 <option key={course.id} value={course.id}>📁 {course.title}</option>
               ))}
@@ -153,28 +157,42 @@ const Upload: React.FC = () => {
           </div>
 
           <Input
-            label="NOTE TITLE"
+            label={t('upload.note_title')}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             required
-            placeholder="e.g. Chapter 4: Matrix Multiplication"
+            placeholder={t('upload.title_placeholder')}
           />
 
           <div className="flex flex-col w-full">
             <label className="mb-2 text-sm font-bold text-retro-muted tracking-widest uppercase">
-              CONTENT (Markdown supported)
+              PAPS Price (0 = Free)
             </label>
-            <textarea
-              className="bg-retro-bg text-retro-text border-2 border-retro-border py-3 px-4 font-mono outline-none focus:border-retro-accent focus:shadow-solid-accent min-h-[150px] resize-y"
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder="Write your notes here..."
+            <input
+              type="number"
+              min="0"
+              className="bg-retro-bg text-retro-text border-2 border-retro-border py-3 px-4 font-mono outline-none focus:border-retro-accent focus:shadow-solid-accent"
+              value={papsPrice}
+              onChange={(e) => setPapsPrice(Number(e.target.value))}
+              placeholder="0"
             />
           </div>
 
           <div className="flex flex-col w-full">
             <label className="mb-2 text-sm font-bold text-retro-muted tracking-widest uppercase">
-              ATTACH IMAGES
+              {t('upload.content')}
+            </label>
+            <textarea
+              className="bg-retro-bg text-retro-text border-2 border-retro-border py-3 px-4 font-mono outline-none focus:border-retro-accent focus:shadow-solid-accent min-h-[150px] resize-y"
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              placeholder={t('upload.content_placeholder')}
+            />
+          </div>
+
+          <div className="flex flex-col w-full">
+            <label className="mb-2 text-sm font-bold text-retro-muted tracking-widest uppercase">
+              {t('upload.attach_images')}
             </label>
             <div
               className={`border-2 border-dashed p-8 text-center transition-colors relative
@@ -194,7 +212,7 @@ const Upload: React.FC = () => {
               />
               <UploadIcon className="mx-auto mb-4 text-retro-muted" size={48} />
               <p className="font-mono text-sm text-retro-muted">
-                DRAG & DROP IMAGES HERE OR CLICK TO BROWSE
+                {t('upload.drag_drop')}
               </p>
             </div>
           </div>
@@ -243,7 +261,7 @@ const Upload: React.FC = () => {
               className="w-full"
               disabled={isLoading}
             >
-              {isLoading ? 'UPLOADING...' : 'COMMIT. UPLOAD_'}
+              {isLoading ? t('upload.uploading') : t('upload.submit')}
             </Button>
           </div>
         </form>
