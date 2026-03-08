@@ -6,30 +6,33 @@ import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
 import { Loader2, User as UserIcon } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
+import { useAuth } from '../context/AuthContext';
 
 const SetupProfile: React.FC = () => {
     const [username, setUsername] = useState('');
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const [currentUsername, setCurrentUsername] = useState('');
+    const [ready, setReady] = useState(false);
 
     const navigate = useNavigate();
     const { t } = useLanguage();
+    const { user } = useAuth();
 
     useEffect(() => {
-        // Fetch the current user to see if they already have a proper username
-        api.get('/auth/me')
-            .then(res => {
-                const u = res.data.username;
-                setCurrentUsername(u);
-                if (u && !u.startsWith('user_')) {
-                    navigate('/');
-                }
-            })
-            .catch(err => {
-                console.error('Failed to fetch user', err);
-            });
-    }, [navigate]);
+        // Use the username from the JWT (already decoded in AuthContext)
+        // If the user already has a proper username, redirect away
+        if (user) {
+            if (user.username && !user.username.startsWith('user_')) {
+                navigate('/');
+            } else {
+                // User needs to pick a username — show the form
+                setReady(true);
+            }
+        } else {
+            // No user at all — shouldn't happen on a ProtectedRoute, but show form anyway
+            setReady(true);
+        }
+    }, [user, navigate]);
 
     const handlePickUsername = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -38,8 +41,7 @@ const SetupProfile: React.FC = () => {
 
         try {
             await api.put('/auth/me', { username });
-            // Force a hard reload so the entire app context gets the new username from the backend
-            // if it relies on fetching /auth/me on load.
+            // Force a hard reload so the entire app context gets the new username
             window.location.href = '/';
         } catch (err: any) {
             setError(err.response?.data?.detail || t('reg.fail_user') || 'Failed to update username');
@@ -48,7 +50,7 @@ const SetupProfile: React.FC = () => {
         }
     };
 
-    if (!currentUsername) {
+    if (!ready) {
         return <div className="flex justify-center items-center py-20"><Loader2 className="animate-spin text-retro-accent" /></div>;
     }
 
