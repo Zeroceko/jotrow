@@ -82,7 +82,7 @@ const Profile: React.FC<ProfileProps> = ({ isPublic = false }) => {
   // Determine if the logged-in user is viewing their own profile
   let loggedInUsername = '';
   if (token) {
-    try { loggedInUsername = (jwtDecode(token) as any).sub || ''; } catch { }
+    try { loggedInUsername = (jwtDecode(token) as any).username || ''; } catch { }
   }
   const isOwnProfile = isAuthenticated && loggedInUsername === username;
 

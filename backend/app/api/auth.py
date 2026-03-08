@@ -61,11 +61,15 @@ def register(
     db.commit()
     db.refresh(user)
     
+    if not user.username:
+        user.username = f"user_{user.id}"
+        db.commit()
+
     # Auto-login
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     return {
         "access_token": security.create_access_token(
-            user.id, expires_delta=access_token_expires
+            user.id, expires_delta=access_token_expires, username=user.username
         ),
         "token_type": "bearer",
         "user_id": user.id,
@@ -93,7 +97,7 @@ def login_access_token(
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     return {
         "access_token": security.create_access_token(
-            user.id, expires_delta=access_token_expires
+            user.id, expires_delta=access_token_expires, username=user.username
         ),
         "token_type": "bearer",
         "user_id": user.id,

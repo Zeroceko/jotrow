@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LogOut, BookText, PlusCircle, User, Globe } from 'lucide-react';
+import { LogOut, BookText, PlusCircle, User, Globe, ChevronDown } from 'lucide-react';
 import { Button } from './ui/Button';
 import { jwtDecode } from 'jwt-decode';
 import { useLanguage } from '../context/LanguageContext';
@@ -33,15 +33,13 @@ export const Navbar: React.FC = () => {
   if (token) {
     try {
       const decoded: any = jwtDecode(token);
-      username = decoded.sub || '';
+      username = decoded.username || '';
     } catch {
       // invalid token
     }
   }
 
-  const toggleLanguage = () => {
-    setLanguage(language === 'en' ? 'tr' : 'en');
-  };
+
 
   return (
     <nav className="border-b-2 border-retro-border bg-retro-bg/90 backdrop-blur-sm sticky top-0 z-50">
@@ -57,14 +55,20 @@ export const Navbar: React.FC = () => {
           </Link>
 
           <div className="flex items-center gap-4">
-            <button
-              onClick={toggleLanguage}
-              className="text-retro-muted hover:text-retro-text font-mono text-sm border-2 border-transparent hover:border-retro-muted px-2 py-1 flex items-center gap-1 transition-colors"
-              title="Toggle Language"
-            >
-              <Globe size={16} />
-              {language.toUpperCase()}
-            </button>
+            <div className="relative group">
+              <button
+                className="text-retro-muted hover:text-retro-text font-mono text-sm border-2 border-transparent hover:border-retro-muted px-2 py-1 flex items-center gap-1 transition-colors"
+                title="Select Language"
+              >
+                <Globe size={16} />
+                <span className="w-6 text-left">{language.toUpperCase()}</span>
+                <ChevronDown size={14} />
+              </button>
+              <div className="absolute right-0 mt-2 w-24 bg-retro-panel border-2 border-retro-border hidden group-hover:block z-50">
+                <button onClick={() => setLanguage('en')} className="block w-full text-left px-4 py-2 hover:bg-retro-bg font-mono text-sm">EN</button>
+                <button onClick={() => setLanguage('tr')} className="block w-full text-left px-4 py-2 hover:bg-retro-bg font-mono text-sm">TR</button>
+              </div>
+            </div>
 
             {isAuthenticated ? (
               <>

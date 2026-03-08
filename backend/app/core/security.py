@@ -17,7 +17,7 @@ def get_password_hash(password: str) -> str:
     return hashed.decode("utf-8")
 
 
-def create_access_token(subject: Union[str, int], expires_delta: Optional[timedelta] = None) -> str:
+def create_access_token(subject: Union[str, int], expires_delta: Optional[timedelta] = None, **kwargs) -> str:
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
     else:
@@ -25,5 +25,7 @@ def create_access_token(subject: Union[str, int], expires_delta: Optional[timede
             minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
         )
     to_encode = {"exp": expire, "sub": str(subject)}
+    if kwargs:
+        to_encode.update(kwargs)
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     return encoded_jwt
