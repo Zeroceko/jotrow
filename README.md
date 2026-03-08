@@ -53,25 +53,19 @@ notlar-burada/
 | `/api/settings/privacy` | PUT | Varsayılan gizlilik ve keşfet ayarlarını güncelle | ✅ |
 | `/api/settings/wallet` | GET | PAPS bakiyesi ve işlem geçmişini listele | ✅ |
 | `/api/settings/earnings` | GET | Haftalık kazanç/harcama özeti | ✅ |
+| `i18n / Context` | Frontend | TR/EN dil desteği ve global metin çevirisi | ✅ |
 ### Frontend
 | Sayfa/Özellik | Durum |
 |---------------|-------|
 | Login / Register sayfaları | ✅ |
-| Dashboard — kurs listesi | ✅ |
-| Dashboard — kurs oluşturma | ✅ |
-| Dashboard — kurs inline düzenleme (kalem ikonu) | ✅ |
-| Dashboard — kurs silme (çift tıklama onayı) | ✅ |
-| Kurs detay — not listesi + görsel thumbnail | ✅ |
-| Kurs detay — not silme (çift tıklama onayı) | ✅ |
-| Kurs detay — görsel lightbox (ok tuşu + ESC desteği) | ✅ |
-| Not yükleme (metin + görsel, sürükle-bırak) | ✅ |
-| Profil paylaşım sayfası `/u/:username` — kilidi açma | ✅ |
-| Profil — kurs kartına tıklanınca notlar açılıyor (collapse panel) | ✅ |
-| Profil — misafir token ile not görüntüleme | ✅ |
-| Profil — not görsellerinde lightbox | ✅ |
-| Ayarlar (Settings) — Profil, Gizlilik, Cüzdan, Hesap sekmeleri | ✅ |
+| Dashboard — kurs listesi & yönetimi | ✅ |
+| Kurs detay — not listesi & lightbox | ✅ |
+| Not yükleme (Metin + Görsel + HEIC desteği) | ✅ |
+| Profil sayfası `/u/:username` — Global Erişim | ✅ |
+| **Dil Seçeneği (EN/TR)** — Tek tıkla tüm site çevirisi | ✅ |
+| **Profil & Ayarlar Navigasyon** — Direkt profil linki & profil içi ayarlar | ✅ |
 | PAPS Sistemi — Bakiye takibi ve işlem geçmişi | ✅ |
-| Özel PIN Belirleme — Kullanıcının kendi 4 haneli kodunu set etmesi | ✅ |
+| Özel PIN Belirleme — Şifreli not erişim kodu | ✅ |
 
 ---
 
@@ -103,7 +97,7 @@ alembic upgrade head
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-> **Not:** Backend `backend/.env` dosyasını okur. Varsayılan değerler local docker-compose ile uyumludur.
+> **Not:** Backend `backend/.env` dosyasını okur. Varsayılan değerler local docker-compose ile uyumludur. Production'da HTTPS güvenliği için `storage.py` otomatik `secure=True` ayarına geçer.
 
 ### 3. Frontend
 
@@ -135,46 +129,26 @@ docker-compose up --build
 ## 📌 Nerede Kaldık — Yapılacaklar
 
 ### ✅ Bu Sprint'te Tamamlananlar
+- [x] **Dil Desteği (i18n):** Global `LanguageContext` ile Türkçe ve İngilizce desteği (Navbar'dan toggle edilebilir).
+- [x] **Profil & Header Revizyonu:** Header'daki karışık ayarlar ikonu yerine "Profile" linki; Ayarlar sayfasına ise Profil'in içinden geçiş sağlandı.
+- [x] **Production Image Upload Fix:** Render'da Supabase S3 bağlantısındaki HTTPS/Secure flag hatası giderildi (Artık resim yükleme prod'da çalışıyor).
+- [x] **JWT Decode (Frontend):** Giriş yapan kullanıcının bilgilerini token'dan okumak için `jwt-decode` entegrasyonu yapıldı.
 - [x] Kullanıcı auth (register, login, JWT)
-- [x] Kurs CRUD (oluştur, listele, düzenle, sil)
-- [x] Not oluşturma + görsel yükleme (MinIO)
-- [x] HEIC/HEIF formatındaki fotoğraflar için backend JPEG dönüştürmesi
-- [x] Not düzenleme (`PUT /api/notes/{id}` + inline frontend UI)
-- [x] Not silme (MinIO görsellerini de temizler)
-- [x] Kurs silme (içindeki notlar ve MinIO görsellerini de temizler)
-- [x] Paylaşım kodu backend'i (`share_code` üretimi)
-- [x] Misafir token ile kurs/not görüntüleme (Profile sayfası)
-- [x] Profil sayfasında kurs kartı → collapse panel → notlar
-- [x] Profil `/u/:username` kilidi için backend/frontend Vite routing fix'leri yapıldı
-- [x] Görsel lightbox (CourseDetail ve Profile sayfalarında)
-- [x] Alembic migration'ları tamamlandı + Docker alt yapısı ayakta
-- [x] Pydantic v2 uyumu (`from_attributes`, `ConfigDict`) — Tüm `api` router'larında.
-- [x] Frontend vite API proxy (baseURL: `/`)
-- [x] Sayfalama (Backend `GET /courses` ve `GET /notes` için `limit`/`offset`)
-- [x] Kurs kartlarında "Not Sayısı" badge'i (`note_count` özelliği)
-- [x] Keşfet Sayfası (Kullanıcı arama, en çok kursu olanlar listesi)
-- [x] Notlara "Övgü (Praise)" özelliği (Animasyonlu UI ve Backend)
-- [x] Başkasının notunu kendi kursuna kopyalama ("Save Note")
-- [x] **Settings Sayfası:** Profil, Gizlilik, Cüzdan (PAPS), Kazançlar ve Hesap sekmeleri.
-- [x] **Cüzdan (PAPS) Sistemi:** Bakiye yönetimi ve işlem geçmişi (Transaction History).
-- [x] **Özel PIN (Share Code):** Kullanıcının kendi 4 haneli kodunu belirleyebilmesi.
-- [x] **Görsel Yükleme Fix:** FormData ve Axios boundary hataları giderildi, "Add to Library" (kurs seçmeden upload) düzeltildi.
-- [x] Backend çalışır durumda + E2E testleri başarılı.
+- [x] Kurs CRUD ve Not oluşturma + görsel yükleme (MinIO)
+- [x] PAPS Sistemi ve Özel PIN belirleme
+- [x] Notlara "Övgü (Praise)" özelliği ve "Save Note" (Başkalarından kaydetme)
 
 ### 🔲 Sonraki Developer İçin Yapılacaklar
 
 #### Orta Öncelik
-- [ ] **Avatar Yükleme:** Kullanıcı profil fotoğrafı yükleyebilmeli (MinIO entegrasyonu hazır, sadece endpoint ve UI eklenmeli).
-- [ ] **Klasör Bazlı Gizlilik:** Şu an gizlilik not bazlı. Kurs (folder) bazlı gizlilik ayarı eklenebilir.
-- [ ] **Frontend Pagination UI:** Backend limit/offset eklendi ancak Frontend hala 100 kaydı birden çekiyor ("Load More" butonu eklenebilir).
+- [ ] **Avatar Yükleme:** Kullanıcı profil fotoğrafı yükleyebilmeli (Backend kütüphaneleri hazır).
+- [ ] **Arama & Filtreleme:** Keşfet sayfasındaki kullanıcı arama özelliğine not içeriği araması eklenebilir.
+- [ ] **Ön Bellek (Caching):** Not listeleri için Redis veya frontend tarafında React Query entegrasyonu.
 
 #### Düşük Öncelik / Production'a Geçiş
 - [ ] **PAPS Payout:** Kullanıcının kazandığı PAPS birimlerini gerçek paraya dönüştürme mantığı.
-- [ ] **Hesap Silme:** Phase 2 kapsamında hesap kapatma fonksiyonu.
-- [ ] **Üretim ortamı:** `SECRET_KEY` ve MinIO credential'ları `.env`'den production secret'larına taşınmalı.
-- [ ] **CORS kısıtlama:** `app/main.py`'de `allow_origins=["*"]` production'da spesifik domainlerle kısıtlanmalı.
-- [ ] **Görsel optimizasyon:** Upload sırasında client-side resize (ör. 1920px max) eklenebilir. Büyük görseller MinIO'da yer ve presigned URL süresi sorununa neden olabilir.
-- [ ] **Presigned URL süresi:** Şu an 60 dakika. Paylaşılan notlar için bu kısa gelebilir; `sharing.py`'de misafir token süresiyle uyumlu hale getirilmeli.
+- [ ] **Görsel optimizasyon:** Upload sırasında client-side resize (ör. 1920px max) eklenebilir.
+- [ ] **Presigned URL süresi:** Şu an 60 dakika. Paylaşılan notlar için `sharing.py`'de bu süre dinamikleştirilebilir.
 
 ---
 
