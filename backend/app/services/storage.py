@@ -31,13 +31,14 @@ def _is_heic(filename: str, content_type: Optional[str]) -> bool:
     ext = os.path.splitext(filename)[1].lower() if filename else ""
     heic_extensions = {".heic", ".heif"}
     heic_types = {"image/heic", "image/heif", "image/heic-sequence", "image/heif-sequence"}
-    return ext in heic_extensions or (content_type and content_type.lower() in heic_types)
+    return ext in heic_extensions or bool(content_type and content_type.lower() in heic_types)
 
+is_local = settings.MINIO_ENDPOINT.startswith("localhost") or settings.MINIO_ENDPOINT.startswith("127.0.0.1") or settings.MINIO_ENDPOINT.startswith("minio")
 client = Minio(
     settings.MINIO_ENDPOINT,
     access_key=settings.MINIO_ACCESS_KEY,
     secret_key=settings.MINIO_SECRET_KEY,
-    secure=False,
+    secure=not is_local,
 )
 
 def ensure_bucket_exists():
