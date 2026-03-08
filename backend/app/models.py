@@ -51,6 +51,7 @@ class Note(Base):
     original_author = Column(String, nullable=True)
     visibility = Column(String, default="private")  # "private" | "public"
     paps_price = Column(Integer, default=0)
+    requires_pin = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     course = relationship("Course", back_populates="notes")

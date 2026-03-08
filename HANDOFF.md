@@ -168,3 +168,12 @@ pages/Explore.tsx           → Kullanıcı keşfet + arama
 6. **[İYİLEŞTİRME]** Note update endpoint'ine inkbox sahiplik kontrolü ekle.
 7. **[FEATURE]** Not içeriği arama (Explore'da veya Dashboard'da).
 8. **[FEATURE]** PAPS ödeme/çekim entegrasyonu.
+
+---
+
+## 🌐 Canlı Ortam (Production) Bilgileri
+
+- **Frontend URL:** [https://jotrow-mu.vercel.app/](https://jotrow-mu.vercel.app/)
+- **Backend URL:** [https://jotrow.onrender.com](https://jotrow.onrender.com)
+
+**(NOT: 08 Mart 2026'da CORS policy (Access-Control-Allow-Origin) sorunu düzeltildi ve Vercel domain'i `main.py` içerisine allow_origins listesine eklendi. Öncesinde API'ye erişim sağlanamadığı için "Failed to upload note" dahil tüm endpointler bloklanıyordu.)**
