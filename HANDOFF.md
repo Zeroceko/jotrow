@@ -1,5 +1,5 @@
 # JOTROW — Developer Handoff
-**Tarih:** 2026-03-08 | **Oturum:** Sprint 4
+**Tarih:** 2026-03-08 | **Oturum:** Sprint 4 (Görsel Fix + PAPS Unlock)
 
 ---
 
@@ -27,6 +27,23 @@ Tüm frontend sayfaları Türkçe/İngilizce çevirisine bağlandı. Artık hiç
 Her sayfada `const { t } = useLanguage();` ile import edilir.  
 Dil seçimi Navbar'da yapılır ve `localStorage`'da saklanır.
 
+### 3. Görsel Yükleme Fix & Sıkıştırma (Pillow)
+MinIO'ya görsel yüklerken alınan "Length -1" hatası ve yüksek depolama kullanımı çözüldü.
+
+**Detaylar:**
+- `storage.py`: Tüm görseller yükleme anında Pillow ile yakalanır.
+- **Sıkıştırma:** Maksimum 1200px genişlik ve %70 JPEG kalitesine düşürülür.
+- **Fix:** Görsel buffer boyutu (`nbytes`) hesaplanarak MinIO'ya net uzunlukla gönderilir.
+- **Depolama:** Dosya boyutlarında %70-%90 oranında azalma sağlandı.
+
+### 4. PAPS ile Not Kilidi Açma (Unlock)
+Not sahipleri artık notlarına PAPS fiyatı koyabiliyor. Başka kullanıcılar bu notu PAPS ödeyerek veya sahibinin PIN kodunu girerek açabiliyor.
+
+**Teknik Detaylar:**
+- **Model:** `Note` tablosuna `paps_price` eklendi. `UnlockedNote` tablosu ile kimin hangi notu açtığı takip ediliyor.
+- **Backend:** `POST /api/notes/{id}/unlock` — Bakiye kontrolü, transfer ve kilit açma kaydı.
+- **Frontend:** `Profile.tsx` ve `CourseDetail.tsx` içerisinde kilitli notlar için "Unlock" modalı/arayüzü eklendi.
+
 **Mevcut çeviri modülleri (key prefix'lerine göre):**
 - `nav.*` — Navbar
 - `home.*` — Ana sayfa
@@ -53,7 +70,12 @@ Dashboard'da gelen kutusundaki (Inbox) notlar, klasörlerin üzerine sürükle-b
 
 ## ⚠️ Bilinen Hatalar / Eksikler
 
-### 1. [KRİTİK] Profil Sayfası — Yönlendirme Sorunu
+### 1. [YENİ / KRİTİK] Canlı Ortamda "Failed to upload note"
+**Sorun:** Localde/Docker'da çözülmesine rağmen bazı canlı (production) ortamlarda görsel yükleme hâlâ hata verebiliyor.
+**Kök Neden:** Prod ortamında Pillow'un (libjpeg vb.) eksik olması veya `.env` içindeki `MINIO_SECURE` ayarının HTTPS uyumsuzluğu.
+**Kontrol:** `storage.py` içindeki `secure=not is_local` mantığı kontrol edilmeli.
+
+### 2. [KRİTİK] Profil Sayfası — Yönlendirme Sorunu
 **Sorun:** Navbar'daki "Profile" linka tıklayınca bazı durumlarda "System Error" geliyor.  
 **Kök Neden:** Profil sayfası `/u/:username` rotasında çalışıyor. Navbar'ın gelen URL yapısına ve JWT'den parse ettiği kullanıcı adına bakmak gerekiyor.  
 **Kontrol Edilecek Yer:** `components/Navbar.tsx` → Profile link URL'si. `pages/Profile.tsx` → `checkProfileExists()` fonksiyonu, `api.get(/api/sharing/${username})` çağrısı.  

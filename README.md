@@ -55,6 +55,7 @@ notlar-burada/
 | `/api/settings/wallet` | GET | PAPS bakiyesi ve işlem geçmişi | ✅ |
 | `/api/settings/earnings` | GET | Haftalık kazanç/harcama özeti | ✅ |
 | `/api/explore` | GET | Keşfet sayfası kullanıcı listesi | ✅ |
+| `/api/notes/{id}/unlock` | POST | PAPS veya PIN ile not kilidi açma | ✅ |
 
 ### Frontend
 | Sayfa/Özellik | Durum |
@@ -69,6 +70,8 @@ notlar-burada/
 | Settings — Profil, Gizlilik, Cüzdan, Kazanç, Hesap | ✅ |
 | Explore — Kullanıcı keşfet & arama | ✅ |
 | PAPS Sistemi — Bakiye & işlem geçmişi | ✅ |
+| **PAPS Unlock** — Kilitli notları PAPS ile satın alma | ✅ |
+| **Görsel Sıkıştırma** — Pillow ile %70+ depolama tasarrufu | ✅ |
 
 ---
 
@@ -76,11 +79,11 @@ notlar-burada/
 
 | # | Öncelik | Sorun | Dosya |
 |---|---------|-------|-------|
-| 1 | 🔴 KRİTİK | DB'de `owner_id = NULL` olan eski notlar yeni kullanıcılara görünüyor | `backend/app/api/notes.py` + DB |
-| 2 | 🔴 KRİTİK | Profil sayfası bazı durumlarda "System Error" veriyor | `pages/Profile.tsx`, `components/Navbar.tsx` |
-| 3 | 🟡 ORTA | Dashboard "Move" butonu çevirilmedi (`dash.move` key eksik) | `pages/Dashboard.tsx:310` |
-| 4 | 🟡 ORTA | `PUT /notes/{id}` endpoint'inde inbox notları için ownership kontrolü yok | `backend/app/api/notes.py:288` |
-| 5 | 🟢 DÜŞÜK | Navbar dil toggle'ında layout shift (butonlar kayıyor) | `components/Navbar.tsx` |
+| 1 | 🔴 KRİTİK | Canlı ortamda "Failed to upload note" (Pillow/MinIO senkronizasyonu) | `storage.py` |
+| 2 | 🔴 KRİTİK | DB'de `owner_id = NULL` olan eski notlar yeni kullanıcılara görünüyor | `backend/app/api/notes.py` + DB |
+| 3 | 🔴 KRİTİK | Profil sayfası bazı durumlarda "System Error" veriyor | `pages/Profile.tsx`, `components/Navbar.tsx` |
+| 4 | 🟡 ORTA | Dashboard "Move" butonu çevirilmedi (`dash.move` key eksik) | `pages/Dashboard.tsx:310` |
+| 5 | 🟡 ORTA | `PUT /notes/{id}` endpoint'inde inbox notları için ownership kontrolü yok | `backend/app/api/notes.py:288` |
 
 > Detaylı açıklamalar ve çözüm önerileri için → [HANDOFF.md](./HANDOFF.md)
 
