@@ -7,6 +7,9 @@
 ## 📽 Vizyon ve Amaç
 JOTROW, akademik bilginin bir değere dönüştüğü bir ekosistem olmayı amaçlar. Kullanıcılar sadece not tutmakla kalmaz, aynı zamanda kendi uzmanlık alanlarını markalaştırır ve **PAPS** token sistemi ile bu bilgiyi ticarileştirebilirler.
 
+> [!IMPORTANT]
+> **Öncelik 1:** Dosya yükleme (upload) işinin tüm ortamlarda stabil hale getirilmesi. Diğer tüm geliştirmeler bu temel üzerine inşa edilecektir.
+
 [📄 Detaylı Developer Devir Belgesi (Handoff) İçin Tıklayın](./DEVOLUTION.md)
 
 ---

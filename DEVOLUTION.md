@@ -67,19 +67,25 @@ Welcome, fellow developer! This document is designed to give you a 360-degree vi
 
 ## 🔜 4. Roadmap (What's Next?)
 
-### 🔴 High Priority (Bugs & Polish)
-1. **Inbox Ownership Check:** `PUT /api/notes/{id}` currently lacks a strict check for notes without a course.
-2. **Move Translation:** The "Move" button on note cards in the Dashboard needs to be wired to the i18n system.
-3. **Ghost Notes Cleanup:** Some old notes in the DB have `owner_id = NULL`. These should be deleted or assigned via a migration.
+### 🟠 High Priority: UX & Critical Fixes
+1. **[CRITICAL] Production File Upload Stability:** This remains the top priority. Ensure MinIO/HTTPS and Pillow dependencies are 100% synchronized across all environments.
+2. **Handle (Username) Selection:** Registration must be a forced multi-step process. Users MUST NOT be able to proceed or skip without setting a handle. If a legacy user logs in without one, they should be immediately redirected to a "Handle Selection" screen.
+3. **Praise/Like Auth Guard:** Clicking the "Praise" button while logged out must trigger a login prompt/popup instead of failing silently.
+4. **My Place (Centralized Dashboard):** Create a unified "My Place" (Benim Yerim) view where users can see all their notes and folders, and initiate new uploads or folder creation directly from there.
 
-### 🟡 Medium Priority (Growth)
-1. **Avatar Upload:** MinIO is ready for it, but the UI in `Settings.tsx` is still a placeholder.
-2. **PAPS Withdrawal:** Implement a way for users to "cash out" or top-up their PAPS balance via a real payment gateway.
-3. **Advanced Search:** Filter notes by tags, dates, or content within the `Explore` page.
+### 🟡 Medium Priority: Feature Refinements
+1. **Save to "MY JOTS":** Saving a note should not require selecting a course. If no course is selected, it should default to a "MY JOTS" (Library Root) section.
+2. **Earnings Hierarchy:** The "Earnings" summary should be nested under the "Wallet" section. If a user has 0 PAPS, display a helpful "How to earn PAPS" guide (e.g., "Share high-quality notes and set a price!").
+3. **Enhanced Unlock UX:** 
+   - When a note is locked, show a clear choice: "Pay PAPS" or "Enter PIN".
+   - **Preview Mode:** Display only the first sentence of the content or the first page of an attachment as a teaser.
+4. **Downloads:** Implement a feature to download saved notes or entire courses for offline use.
+5. **Upload Flow Refinement:** Rename the "Content" field to "Description". It should be treated as brief info about the note rather than the full body text.
 
 ### 🟢 Long Term (Vision)
 1. **AI Summarization:** Auto-generate summaries for uploaded note images.
 2. **Collaborative Courses:** Let multiple users contribute to the same folder.
+3. **PAPS Withdrawal:** Implement a way for users to "cash out" via real payment gateways.
 
 ---
 
