@@ -91,8 +91,8 @@ def read_library_notes(
     db: Session = Depends(deps.get_db),
     current_user: models.User = Depends(deps.get_current_user),
 ) -> Any:
-    """Get all notes NOT assigned to any course (library root / inbox)."""
     notes = db.query(models.Note).filter(
+        models.Note.owner_id == current_user.id,
         models.Note.course_id == None,
         models.Note.original_author == None,  # exclude saved notes from others
     ).join(models.NoteImage, models.Note.id == models.NoteImage.note_id, isouter=True).all()
@@ -263,7 +263,7 @@ def create_note(
         if not course:
             raise HTTPException(status_code=404, detail="Course not found")
 
-    note = models.Note(title=title, content=content, course_id=course_id)
+    note = models.Note(title=title, content=content, course_id=course_id, owner_id=current_user.id)
     db.add(note)
     db.commit()
     db.refresh(note)

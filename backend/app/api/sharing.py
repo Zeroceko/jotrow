@@ -197,6 +197,7 @@ def save_note(
         title=note.title,
         content=note.content,
         course_id=request.course_id,
+        owner_id=current_user.id,
         original_author=note.original_author or original_author_user.username
     )
     db.add(new_note)

@@ -26,6 +26,7 @@ class User(Base):
     paps_balance = Column(Integer, default=0)
 
     courses = relationship("Course", back_populates="owner")
+    notes_root = relationship("Note", back_populates="owner", foreign_keys="Note.owner_id")
     transactions = relationship("Transaction", back_populates="user")
 
 class Course(Base):
@@ -45,6 +46,7 @@ class Note(Base):
     title = Column(String, index=True)
     content = Column(Text, nullable=True)
     course_id = Column(Integer, ForeignKey("courses.id"), nullable=True)
+    owner_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     praise_count = Column(Integer, default=0)
     original_author = Column(String, nullable=True)
     visibility = Column(String, default="private")  # "private" | "public"
@@ -52,6 +54,7 @@ class Note(Base):
 
     course = relationship("Course", back_populates="notes")
     images = relationship("NoteImage", back_populates="note")
+    owner = relationship("User", back_populates="notes_root", foreign_keys=[owner_id])
 
 class NoteImage(Base):
     __tablename__ = "note_images"
