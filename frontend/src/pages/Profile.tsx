@@ -97,13 +97,17 @@ const Profile: React.FC<ProfileProps> = ({ isPublic = false }) => {
     }
   }, [isPublic, username]);
 
+  const getAuthHeaders = (tokenOverride?: string) => {
+    const headers: any = {};
+    if (tokenOverride) headers.Authorization = `Bearer ${tokenOverride}`;
+    else if (token) headers.Authorization = `Bearer ${token}`;
+    else if (guestToken) headers.Authorization = `Bearer ${guestToken}`;
+    return headers;
+  };
+
   const fetchPublicCourses = async (tokenOverride?: string) => {
     try {
-      const headers: any = {};
-      if (tokenOverride) headers.Authorization = `Bearer ${tokenOverride}`;
-      else if (guestToken) headers.Authorization = `Bearer ${guestToken}`;
-
-      const res = await api.get(`/api/sharing/${username}/courses`, { headers });
+      const res = await api.get(`/api/sharing/${username}/courses`, { headers: getAuthHeaders(tokenOverride) });
       setCourses(res.data);
     } catch {
       setError('Failed to fetch public courses.');
@@ -180,11 +184,7 @@ const Profile: React.FC<ProfileProps> = ({ isPublic = false }) => {
   };
 
   const reloadCourseNotes = async (courseId: number, tkn?: string) => {
-    const headers: any = {};
-    if (tkn) headers.Authorization = `Bearer ${tkn}`;
-    else if (guestToken) headers.Authorization = `Bearer ${guestToken}`;
-
-    const res = await api.get(`/api/sharing/${username}/courses/${courseId}/notes`, { headers });
+    const res = await api.get(`/api/sharing/${username}/courses/${courseId}/notes`, { headers: getAuthHeaders(tkn) });
     setCourseNotes(prev => ({ ...prev, [courseId]: res.data }));
   };
 
@@ -199,7 +199,7 @@ const Profile: React.FC<ProfileProps> = ({ isPublic = false }) => {
     setLoadingCourseId(courseId);
     try {
       const res = await api.get(`/api/sharing/${username}/courses/${courseId}/notes`, {
-        headers: { Authorization: `Bearer ${guestToken}` },
+        headers: getAuthHeaders(),
       });
       setCourseNotes(prev => ({ ...prev, [courseId]: res.data }));
     } catch {
