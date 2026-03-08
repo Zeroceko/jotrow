@@ -59,3 +59,23 @@ async def debug_minio():
             "error": str(e),
             "error_type": type(e).__name__,
         }
+
+@app.post("/debug/seed")
+async def debug_seed():
+    """Temporary endpoint to seed the database with test data."""
+    try:
+        import importlib
+        import sys
+        # Import and run the seed script
+        sys.path.insert(0, "/app")
+        if "seed" in sys.modules:
+            importlib.reload(sys.modules["seed"])
+        else:
+            import seed as seed_module
+        seed_module = sys.modules.get("seed")
+        if seed_module and hasattr(seed_module, "seed"):
+            seed_module.seed()
+            return {"status": "ok", "message": "Seed completed successfully"}
+        return {"status": "error", "message": "Could not find seed module"}
+    except Exception as e:
+        return {"status": "error", "error": str(e), "error_type": type(e).__name__}
