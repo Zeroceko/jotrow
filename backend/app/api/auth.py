@@ -12,6 +12,7 @@ from app.api import deps
 from app.core import security
 from app.core.config import settings
 from pydantic import BaseModel, ConfigDict
+from typing import Optional as Opt
 
 router = APIRouter()
 
@@ -23,7 +24,7 @@ class UserResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
     username: str
-    share_code: str
+    share_code: Opt[str] = None
 
 class Token(BaseModel):
     access_token: str
