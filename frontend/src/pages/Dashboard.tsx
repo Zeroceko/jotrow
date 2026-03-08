@@ -45,6 +45,9 @@ const Dashboard: React.FC = () => {
   // Move note to course
   const [movingNoteId, setMovingNoteId] = useState<number | null>(null);
 
+  // Drag and drop state
+  const [dragOverCourseId, setDragOverCourseId] = useState<number | null>(null);
+
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -251,7 +254,15 @@ const Dashboard: React.FC = () => {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {libraryNotes.map(note => (
-              <Card key={note.id} className="relative group hover:border-retro-accent transition-all shadow-solid hover:shadow-solid-accent">
+              <Card
+                key={note.id}
+                className="relative group hover:border-retro-accent transition-all shadow-solid hover:shadow-solid-accent cursor-pointer"
+                draggable
+                onDragStart={(e: React.DragEvent) => {
+                  e.dataTransfer.setData('noteId', note.id.toString());
+                  e.dataTransfer.effectAllowed = 'move';
+                }}
+              >
                 <div className="flex justify-between items-start mb-2">
                   <h3 className="font-bold uppercase tracking-tighter text-lg line-clamp-2 group-hover:text-retro-accent transition-colors flex-1">
                     {note.title}
@@ -344,7 +355,25 @@ const Dashboard: React.FC = () => {
             {courses.map(course => (
               <Card
                 key={course.id}
-                className="group hover:-translate-y-2 transition-all duration-300 cursor-pointer relative flex flex-col h-full border-2 hover:border-retro-accent shadow-solid hover:shadow-solid-accent"
+                onDragOver={(e: React.DragEvent) => {
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = 'move';
+                  setDragOverCourseId(course.id);
+                }}
+                onDragLeave={() => setDragOverCourseId(null)}
+                onDrop={(e: React.DragEvent) => {
+                  e.preventDefault();
+                  setDragOverCourseId(null);
+                  const noteIdStr = e.dataTransfer.getData('noteId');
+                  if (noteIdStr) {
+                    const noteId = parseInt(noteIdStr, 10);
+                    handleMoveNote(noteId, course.id);
+                  }
+                }}
+                className={`group hover:-translate-y-2 transition-all duration-300 relative flex flex-col h-full border-2 shadow-solid hover:shadow-solid-accent cursor-pointer ${dragOverCourseId === course.id
+                  ? 'border-retro-accent bg-retro-accent/10 scale-105'
+                  : 'border-retro-border hover:border-retro-accent'
+                  }`}
               >
                 {editingId === course.id ? (
                   <form onSubmit={(e) => handleUpdate(course.id, e)} className="flex flex-col gap-3 flex-grow">
