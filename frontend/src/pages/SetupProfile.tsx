@@ -40,8 +40,12 @@ const SetupProfile: React.FC = () => {
         setIsLoading(true);
 
         try {
-            await api.put('/auth/me', { username });
-            // Force a hard reload so the entire app context gets the new username
+            const res = await api.put('/auth/me', { username });
+            // Backend returns a new JWT with the updated username — save it
+            if (res.data.access_token) {
+                localStorage.setItem('token', res.data.access_token);
+            }
+            // Force a hard reload so the entire app context picks up the new token
             window.location.href = '/';
         } catch (err: any) {
             setError(err.response?.data?.detail || t('reg.fail_user') || 'Failed to update username');

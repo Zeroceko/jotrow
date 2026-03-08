@@ -125,7 +125,14 @@ def read_user_me(
     """
     return current_user
 
-@router.put("/me", response_model=UserResponse)
+class UserUpdateResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    username: str
+    share_code: Opt[str] = None
+    access_token: str | None = None
+
+@router.put("/me", response_model=UserUpdateResponse)
 def update_user_me(
     *,
     db: Session = Depends(deps.get_db),
@@ -133,7 +140,7 @@ def update_user_me(
     current_user: models.User = Depends(deps.get_current_user),
 ) -> Any:
     """
-    Update own user details.
+    Update own user details. Returns a fresh JWT with the new username.
     """
     if user_in.username:
         # Check if username exists
@@ -148,4 +155,16 @@ def update_user_me(
     db.add(current_user)
     db.commit()
     db.refresh(current_user)
-    return current_user
+
+    # Issue a new JWT with the updated username
+    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    new_token = security.create_access_token(
+        current_user.id, expires_delta=access_token_expires, username=current_user.username
+    )
+
+    return {
+        "id": current_user.id,
+        "username": current_user.username,
+        "share_code": current_user.share_code,
+        "access_token": new_token,
+    }
