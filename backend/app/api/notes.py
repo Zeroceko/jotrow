@@ -272,10 +272,19 @@ def create_note(
     db.commit()
     db.refresh(note)
 
+    import io
     for file in files:
         if file.filename:
-            minio_key = storage.upload_file_to_minio(file.file, file.filename, file.content_type)
-            db.add(models.NoteImage(note_id=note.id, minio_key=minio_key))
+            try:
+                # Read entire file into memory to avoid SpooledTemporaryFile seek issues
+                raw_bytes = file.file.read()
+                file_buf = io.BytesIO(raw_bytes)
+                ct = file.content_type or "application/octet-stream"
+                minio_key = storage.upload_file_to_minio(file_buf, file.filename, ct)
+                db.add(models.NoteImage(note_id=note.id, minio_key=minio_key))
+            except Exception as e:
+                print(f"[UPLOAD ERROR] file={file.filename} error={e}")
+                raise HTTPException(status_code=500, detail=f"Failed to upload image '{file.filename}': {str(e)}")
 
     db.commit()
     return {"message": "Note uploaded successfully", "note_id": note.id}
