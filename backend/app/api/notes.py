@@ -384,3 +384,35 @@ def delete_note(
 
     db.delete(note)
     db.commit()
+
+
+@router.post("/notes/{note_id}/images")
+def add_images_to_note(
+    note_id: int,
+    files: List[UploadFile] = File(...),
+    db: Session = Depends(deps.get_db),
+    current_user: models.User = Depends(deps.get_current_user),
+) -> Any:
+    """Add images to an existing note owned by the current user."""
+    note = db.query(models.Note).filter(models.Note.id == note_id).first()
+    if not note:
+        raise HTTPException(status_code=404, detail="Note not found")
+    if note.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    import io
+    added = []
+    for file in files:
+        if file.filename:
+            try:
+                raw_bytes = file.file.read()
+                file_buf = io.BytesIO(raw_bytes)
+                ct = file.content_type or "application/octet-stream"
+                minio_key = storage.upload_file_to_minio(file_buf, file.filename, ct)
+                db.add(models.NoteImage(note_id=note.id, minio_key=minio_key))
+                added.append(file.filename)
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"Failed to upload '{file.filename}': {str(e)}")
+
+    db.commit()
+    return {"message": f"Added {len(added)} image(s)", "files": added}

@@ -460,56 +460,95 @@ const Profile: React.FC<ProfileProps> = ({ isPublic = false }) => {
                         </p>
                       ) : (
                         notes.map(note => (
-                          <div key={note.id} className="border-l-2 border-retro-accent pl-4">
-                            <div className="flex items-start gap-4 flex-col md:flex-row">
-                              {/* Images */}
-                              {note.images && note.images.length > 0 && (
-                                <div className="flex gap-2 flex-wrap md:w-40 flex-shrink-0">
-                                  {note.images.map((img, idx) => (
-                                    <div
-                                      key={idx}
-                                      className="w-16 h-16 bg-retro-bg border-2 border-retro-border overflow-hidden cursor-zoom-in group relative"
-                                      onClick={() => openLightbox(note.images, idx)}
-                                    >
-                                      <img src={img} alt="" className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
-                                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 bg-black/30 transition-opacity">
-                                        <ZoomIn size={14} className="text-white" />
-                                      </div>
+                          <div key={note.id} className={`border-l-2 ${note.is_locked ? 'border-retro-danger/50' : 'border-retro-accent'} pl-4`}>
+                            {note.is_locked ? (
+                              /* ── Locked Note: Preview + Click to Unlock ── */
+                              <div
+                                className="cursor-pointer group"
+                                onClick={() => { setTargetUnlockNote(note); setUnlockModalOpen(true); setUnlockError(''); setShareCode(''); }}
+                              >
+                                <div className="flex items-start gap-4 flex-col md:flex-row">
+                                  {/* Blurred placeholder image */}
+                                  <div className="md:w-40 flex-shrink-0">
+                                    <div className="w-16 h-16 bg-retro-border/30 border-2 border-retro-border flex items-center justify-center">
+                                      <Lock size={20} className="text-retro-danger/60" />
                                     </div>
-                                  ))}
-                                </div>
-                              )}
-                              {/* Content */}
-                              <div className="flex-1 min-w-0 flex flex-col justify-between">
-                                <div>
-                                  <h4 className="font-bold uppercase text-base mb-1">{note.title}</h4>
-                                  <div className="text-retro-muted font-mono text-xs mb-2">
-                                    {format(new Date(note.created_at), 'MMM dd, yyyy')}
                                   </div>
-                                  {note.content && (
-                                    <p className="text-retro-text font-serif text-sm leading-relaxed whitespace-pre-wrap line-clamp-6">
-                                      {note.content}
-                                    </p>
-                                  )}
-                                </div>
-                                <div className="mt-4 flex justify-end gap-2">
-                                  {isAuthenticated && (
-                                    <button
-                                      onClick={(e) => { e.stopPropagation(); openSaveModal(note.id); }}
-                                      className="flex items-center gap-2 text-xs font-bold font-mono px-3 py-1 border-2 border-retro-text text-retro-text hover:bg-retro-text hover:text-retro-bg transition-colors"
-                                    >
-                                      <Bookmark size={14} /> {t('prof.save')}
-                                    </button>
-                                  )}
-                                  <button
-                                    onClick={(e) => { e.stopPropagation(); handlePraise(course.id, note.id); }}
-                                    className="flex items-center gap-2 text-xs font-bold font-mono px-3 py-1 border-2 border-retro-accent text-retro-accent hover:bg-retro-accent hover:text-retro-bg transition-colors"
-                                  >
-                                    <span>🙌</span> {t('prof.praise')} {note.praise_count > 0 && `(${note.praise_count})`}
-                                  </button>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <Lock size={14} className="text-retro-danger" />
+                                      <h4 className="font-bold uppercase text-base">{note.title}</h4>
+                                    </div>
+                                    <div className="text-retro-muted font-mono text-xs mb-2">
+                                      {format(new Date(note.created_at), 'MMM dd, yyyy')}
+                                    </div>
+                                    {/* Preview: first sentence only */}
+                                    {note.content && (
+                                      <p className="text-retro-muted font-serif text-sm leading-relaxed italic">
+                                        {note.content.split('.')[0]}...
+                                      </p>
+                                    )}
+                                    <div className="mt-3 flex items-center gap-2">
+                                      <span className="inline-flex items-center gap-1 px-3 py-1 bg-retro-accent/10 border border-retro-accent/30 text-retro-accent font-mono text-xs font-bold group-hover:bg-retro-accent group-hover:text-retro-bg transition-colors">
+                                        <Unlock size={12} />
+                                        {note.paps_price > 0 ? `${note.paps_price} PAPS ile Aç` : 'PIN ile Aç'}
+                                      </span>
+                                    </div>
+                                  </div>
                                 </div>
                               </div>
-                            </div>
+                            ) : (
+                              /* ── Unlocked Note: Full content ── */
+                              <div className="flex items-start gap-4 flex-col md:flex-row">
+                                {/* Images */}
+                                {note.images && note.images.length > 0 && (
+                                  <div className="flex gap-2 flex-wrap md:w-40 flex-shrink-0">
+                                    {note.images.map((img, idx) => (
+                                      <div
+                                        key={idx}
+                                        className="w-16 h-16 bg-retro-bg border-2 border-retro-border overflow-hidden cursor-zoom-in group relative"
+                                        onClick={() => openLightbox(note.images, idx)}
+                                      >
+                                        <img src={img} alt="" className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
+                                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 bg-black/30 transition-opacity">
+                                          <ZoomIn size={14} className="text-white" />
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                                {/* Content */}
+                                <div className="flex-1 min-w-0 flex flex-col justify-between">
+                                  <div>
+                                    <h4 className="font-bold uppercase text-base mb-1">{note.title}</h4>
+                                    <div className="text-retro-muted font-mono text-xs mb-2">
+                                      {format(new Date(note.created_at), 'MMM dd, yyyy')}
+                                    </div>
+                                    {note.content && (
+                                      <p className="text-retro-text font-serif text-sm leading-relaxed whitespace-pre-wrap line-clamp-6">
+                                        {note.content}
+                                      </p>
+                                    )}
+                                  </div>
+                                  <div className="mt-4 flex justify-end gap-2">
+                                    {isAuthenticated && (
+                                      <button
+                                        onClick={(e) => { e.stopPropagation(); openSaveModal(note.id); }}
+                                        className="flex items-center gap-2 text-xs font-bold font-mono px-3 py-1 border-2 border-retro-text text-retro-text hover:bg-retro-text hover:text-retro-bg transition-colors"
+                                      >
+                                        <Bookmark size={14} /> {t('prof.save')}
+                                      </button>
+                                    )}
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); handlePraise(course.id, note.id); }}
+                                      className="flex items-center gap-2 text-xs font-bold font-mono px-3 py-1 border-2 border-retro-accent text-retro-accent hover:bg-retro-accent hover:text-retro-bg transition-colors"
+                                    >
+                                      <span>🙌</span> {t('prof.praise')} {note.praise_count > 0 && `(${note.praise_count})`}
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         ))
                       )}
