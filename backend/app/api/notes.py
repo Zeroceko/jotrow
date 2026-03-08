@@ -253,6 +253,7 @@ def create_note(
     title: str = Form(...),
     content: Optional[str] = Form(None),
     paps_price: int = Form(0),
+    requires_pin: bool = Form(False),
     files: List[UploadFile] = File(default=[]),
     db: Session = Depends(deps.get_db),
     current_user: models.User = Depends(deps.get_current_user),
@@ -266,7 +267,7 @@ def create_note(
         if not course:
             raise HTTPException(status_code=404, detail="Course not found")
 
-    note = models.Note(title=title, content=content, course_id=course_id, owner_id=current_user.id, paps_price=paps_price)
+    note = models.Note(title=title, content=content, course_id=course_id, owner_id=current_user.id, paps_price=paps_price, requires_pin=requires_pin)
     db.add(note)
     db.commit()
     db.refresh(note)

@@ -18,6 +18,7 @@ const Upload: React.FC = () => {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [papsPrice, setPapsPrice] = useState<number>(0);
+  const [requiresPin, setRequiresPin] = useState<boolean>(false);
   const [files, setFiles] = useState<File[]>([]);
 
   const [isLoading, setIsLoading] = useState(false);
@@ -94,6 +95,7 @@ const Upload: React.FC = () => {
       formData.append('title', title);
       formData.append('content', content);
       formData.append('paps_price', papsPrice.toString());
+      formData.append('requires_pin', requiresPin.toString());
 
       files.forEach(file => {
         formData.append('files', file);
@@ -176,6 +178,21 @@ const Upload: React.FC = () => {
               onChange={(e) => setPapsPrice(Number(e.target.value))}
               placeholder="0"
             />
+          </div>
+
+          <div className="flex items-center gap-3">
+            <input
+              type="checkbox"
+              id="requiresPin"
+              className="w-5 h-5 appearance-none border-2 border-retro-border checked:bg-retro-accent checked:border-retro-accent outline-none cursor-pointer transition-colors relative 
+              checked:after:content-[''] checked:after:absolute checked:after:left-[5px] checked:after:top-[1px] checked:after:w-2 checked:after:h-3 
+              checked:after:border-r-2 checked:after:border-b-2 checked:after:border-retro-bg checked:after:rotate-45"
+              checked={requiresPin}
+              onChange={(e) => setRequiresPin(e.target.checked)}
+            />
+            <label htmlFor="requiresPin" className="text-sm font-bold text-retro-text cursor-pointer select-none">
+              Require PIN Code / Sadece PIN ile Açılsın
+            </label>
           </div>
 
           <div className="flex flex-col w-full">
