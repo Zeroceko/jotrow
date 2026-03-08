@@ -244,6 +244,41 @@ def get_public_courses(username: str, db: Session = Depends(deps.get_db)) -> Any
         })
     return result
 
+@router.get("/{username}/purchases")
+def get_user_purchases(username: str, db: Session = Depends(deps.get_db)) -> Any:
+    """
+    Get notes that the user has unlocked.
+    """
+    user = db.query(models.User).filter(models.User.username == username).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    unlocked = db.query(models.UnlockedNote).filter(models.UnlockedNote.user_id == user.id).all()
+    if not unlocked:
+        return []
+        
+    note_ids = [u.note_id for u in unlocked]
+    notes = db.query(models.Note).filter(models.Note.id.in_(note_ids)).all()
+    
+    result = []
+    for n in notes:
+        owner = db.query(models.User).filter(models.User.id == n.owner_id).first()
+        nt_dict = {
+            "id": n.id,
+            "title": n.title,
+            "content": n.content,
+            "paps_price": n.paps_price,
+            "requires_pin": n.requires_pin,
+            "created_at": n.created_at,
+            "owner_username": owner.username if owner else "unknown",
+            "images": [{"id": img.id, "minio_key": img.minio_key} for img in n.images]
+        }
+        result.append(nt_dict)
+    
+    # Sort by created_at desc (or could sort by unlock time if we had it)
+    result.sort(key=lambda x: x["created_at"], reverse=True)
+    return result
+
 @router.get("/{username}/courses/{course_id}/notes")
 def get_public_notes(
     username: str, 

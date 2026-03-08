@@ -70,6 +70,10 @@ const Profile: React.FC<ProfileProps> = ({ isPublic = false }) => {
   const [courseNotes, setCourseNotes] = useState<Record<number, Note[]>>({});
   const [loadingCourseId, setLoadingCourseId] = useState<number | null>(null);
 
+  // Purchased notes
+  const [purchasedNotes, setPurchasedNotes] = useState<Note[]>([]);
+  const [activeTab, setActiveTab] = useState<'courses' | 'purchases'>('courses');
+
   // Lightbox
   const [lightboxImages, setLightboxImages] = useState<string[]>([]);
   const [lightboxIndex, setLightboxIndex] = useState(0);
@@ -117,6 +121,15 @@ const Profile: React.FC<ProfileProps> = ({ isPublic = false }) => {
     }
   };
 
+  const fetchPurchasedNotes = async (tokenOverride?: string) => {
+    try {
+      const res = await api.get(`/api/sharing/${username}/purchases`, { headers: getAuthHeaders(tokenOverride) });
+      setPurchasedNotes(res.data);
+    } catch {
+      console.error('Failed to fetch purchased notes.');
+    }
+  };
+
   const checkProfileExists = async () => {
     setIsLoading(true);
     try {
@@ -131,8 +144,16 @@ const Profile: React.FC<ProfileProps> = ({ isPublic = false }) => {
       });
       // Try fetching public courses
       await fetchPublicCourses();
+
+      // If own profile, fetch purchased notes
+      const isOwner = token && typeof token === 'string' &&
+        (jwtDecode<any>(token).sub === username || username === '');
+      if (isOwner || !isPublic) {
+        await fetchPurchasedNotes();
+      }
     } catch (err: any) {
       setError(err.response?.data?.detail || 'User not found.');
+      console.error(err);
     } finally {
       setIsLoading(false);
     }
@@ -168,9 +189,12 @@ const Profile: React.FC<ProfileProps> = ({ isPublic = false }) => {
     setIsUnlocking(true);
     try {
       await api.post(`/api/sharing/notes/${note.id}/unlock`, { method: 'paps' });
-      alert("Note unlocked successfully!");
+      alert("Not başarıyla satın alındı ve kilidi açıldı!");
       if (expandedCourseId) {
         await reloadCourseNotes(expandedCourseId);
+      }
+      if (isOwnProfile) {
+        await fetchPurchasedNotes();
       }
       setUnlockModalOpen(false);
       setTargetUnlockNote(null);
@@ -451,173 +475,265 @@ const Profile: React.FC<ProfileProps> = ({ isPublic = false }) => {
           </div>
         </div>
 
+        {isOwnProfile && (
+          <div className="flex gap-4 border-b-2 border-retro-border pb-4 mb-4">
+            <button
+              onClick={() => setActiveTab('courses')}
+              className={`font-bold uppercase tracking-widest text-sm px-4 py-2 transition-all ${activeTab === 'courses'
+                ? 'bg-retro-accent text-retro-bg shadow-[4px_4px_0px_0px_#FFD700]'
+                : 'bg-retro-bg text-retro-muted hover:text-retro-text border-2 border-retro-border hover:border-retro-accent'
+                }`}
+            >
+              Derslerim
+            </button>
+            <button
+              onClick={() => setActiveTab('purchases')}
+              className={`font-bold uppercase tracking-widest text-sm px-4 py-2 transition-all ${activeTab === 'purchases'
+                ? 'bg-retro-accent text-retro-bg shadow-[4px_4px_0px_0px_#FFD700]'
+                : 'bg-retro-bg text-retro-muted hover:text-retro-text border-2 border-retro-border hover:border-retro-accent'
+                }`}
+            >
+              Satın Aldıklarım
+            </button>
+          </div>
+        )}
+
         {isLoading ? (
           <div className="flex justify-center p-12">
             <Loader2 className="animate-spin text-retro-accent" size={32} />
           </div>
-        ) : courses.length === 0 ? (
-          <div className="border-2 border-dashed border-retro-border p-12 text-center text-retro-muted font-mono">
-            <BookOpen className="mx-auto mb-4 opacity-50" size={48} />
-            <p>{t('prof.no_courses')}</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 gap-6">
-            {courses.map(course => {
-              const isExpanded = expandedCourseId === course.id;
-              const notes = courseNotes[course.id];
-              const isLoadingNotes = loadingCourseId === course.id;
+        ) : activeTab === 'courses' ? (
+          courses.length === 0 ? (
+            <div className="border-2 border-dashed border-retro-border p-12 text-center text-retro-muted font-mono">
+              <BookOpen className="mx-auto mb-4 opacity-50" size={48} />
+              <p>{t('prof.no_courses')}</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-6">
+              {courses.map(course => {
+                const isExpanded = expandedCourseId === course.id;
+                const notes = courseNotes[course.id];
+                const isLoadingNotes = loadingCourseId === course.id;
 
-              return (
-                <Card key={course.id} className={`border-2 transition-all duration-300 ${isExpanded ? 'border-retro-accent shadow-solid-accent' : 'border-retro-border hover:border-retro-accent shadow-solid overflow-hidden'}`}>
-                  {/* Course header — clickable */}
-                  <button
-                    className="w-full flex items-center justify-between gap-4 text-left group"
-                    onClick={() => toggleCourseNotes(course.id)}
-                  >
-                    <div className="flex-grow min-w-0">
-                      <div className="flex items-center gap-3">
-                        <h3 className="text-xl font-bold uppercase group-hover:text-retro-accent transition-colors truncate">
-                          {course.title}
-                        </h3>
-                        <span className="bg-retro-border/50 text-retro-text text-xs px-2 py-0.5 font-mono">
-                          {course.note_count} {t('prof.notes')}
-                        </span>
-                      </div>
-                      {course.description && (
-                        <p className="text-retro-muted font-mono text-sm truncate">{course.description}</p>
-                      )}
-                    </div>
-                    <div className="flex-shrink-0 text-retro-muted group-hover:text-retro-accent transition-colors">
-                      {isLoadingNotes ? (
-                        <Loader2 size={20} className="animate-spin" />
-                      ) : isExpanded ? (
-                        <ChevronUp size={20} />
-                      ) : (
-                        <ChevronDown size={20} />
-                      )}
-                    </div>
-                  </button>
-
-                  {/* Expanded notes panel */}
-                  {isExpanded && (
-                    <div className="mt-4 pt-4 border-t-2 border-dashed border-retro-border space-y-6">
-                      {isLoadingNotes ? (
-                        <div className="flex justify-center py-6">
-                          <Loader2 className="animate-spin text-retro-accent" size={24} />
+                return (
+                  <Card key={course.id} className={`border-2 transition-all duration-300 ${isExpanded ? 'border-retro-accent shadow-solid-accent' : 'border-retro-border hover:border-retro-accent shadow-solid overflow-hidden'}`}>
+                    {/* Course header — clickable */}
+                    <button
+                      className="w-full flex items-center justify-between gap-4 text-left group"
+                      onClick={() => toggleCourseNotes(course.id)}
+                    >
+                      <div className="flex-grow min-w-0">
+                        <div className="flex items-center gap-3">
+                          <h3 className="text-xl font-bold uppercase group-hover:text-retro-accent transition-colors truncate">
+                            {course.title}
+                          </h3>
+                          <span className="bg-retro-border/50 text-retro-text text-xs px-2 py-0.5 font-mono">
+                            {course.note_count} {t('prof.notes')}
+                          </span>
                         </div>
-                      ) : !notes || notes.length === 0 ? (
-                        <p className="text-retro-muted font-mono text-sm text-center py-4">
-                          {t('prof.no_notes')}
-                        </p>
-                      ) : (
-                        notes.map(note => (
-                          <div key={note.id} className={`border-l-2 ${note.is_locked ? 'border-retro-danger/50' : 'border-retro-accent'} pl-4`}>
-                            {note.is_locked ? (
-                              /* ── Locked Note: Preview + Click to Unlock ── */
-                              <div
-                                className="cursor-pointer group"
-                                onClick={() => { setTargetUnlockNote(note); setUnlockModalOpen(true); setUnlockError(''); setShareCode(''); }}
-                              >
-                                <div className="flex items-start gap-4 flex-col md:flex-row">
-                                  {/* Blurred placeholder image */}
-                                  <div className="md:w-40 flex-shrink-0">
-                                    <div className="w-16 h-16 bg-retro-border/30 border-2 border-retro-border flex items-center justify-center">
-                                      <Lock size={20} className="text-retro-danger/60" />
-                                    </div>
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 mb-1">
-                                      <Lock size={14} className="text-retro-danger" />
-                                      <h4 className="font-bold uppercase text-base">{note.title}</h4>
-                                    </div>
-                                    <div className="text-retro-muted font-mono text-xs mb-2">
-                                      {format(new Date(note.created_at), 'MMM dd, yyyy')}
-                                    </div>
-                                    {/* Preview: first sentence only */}
-                                    {note.content && (
-                                      <p className="text-retro-muted font-serif text-sm leading-relaxed italic">
-                                        {note.content.split('.')[0]}...
-                                      </p>
-                                    )}
-                                    <div className="mt-3 flex items-center gap-2">
-                                      <span className="inline-flex items-center gap-1 px-3 py-1 bg-retro-accent/10 border border-retro-accent/30 text-retro-accent font-mono text-xs font-bold group-hover:bg-retro-accent group-hover:text-retro-bg transition-colors">
-                                        <Unlock size={12} />
-                                        {note.paps_price > 0 ? `${note.paps_price} PAPS ile Aç` : 'PIN ile Aç'}
-                                      </span>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            ) : (
-                              /* ── Unlocked Note: Full content ── */
-                              <div className="flex items-start gap-4 flex-col md:flex-row">
-                                {/* Images */}
-                                {note.images && note.images.length > 0 && (
-                                  <div className="flex gap-2 flex-wrap md:w-40 flex-shrink-0">
-                                    {note.images.map((img, idx) => (
-                                      <div
-                                        key={idx}
-                                        className="w-16 h-16 bg-retro-bg border-2 border-retro-border overflow-hidden cursor-zoom-in group relative"
-                                        onClick={() => openLightbox(note.images, idx)}
-                                      >
-                                        <img src={img} alt="" className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
-                                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 bg-black/30 transition-opacity">
-                                          <ZoomIn size={14} className="text-white" />
-                                        </div>
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
-                                {/* Content */}
-                                <div className="flex-1 min-w-0 flex flex-col justify-between">
-                                  <div>
-                                    <h4 className="font-bold uppercase text-base mb-1">{note.title}</h4>
-                                    <div className="text-retro-muted font-mono text-xs mb-2">
-                                      {format(new Date(note.created_at), 'MMM dd, yyyy')}
-                                    </div>
-                                    {note.content && (
-                                      <p className="text-retro-text font-serif text-sm leading-relaxed whitespace-pre-wrap line-clamp-6">
-                                        {note.content}
-                                      </p>
-                                    )}
-                                  </div>
-                                  <div className="mt-4 flex justify-end gap-2">
-                                    {isAuthenticated && (
-                                      <>
-                                        <button
-                                          onClick={(e) => { e.stopPropagation(); openSaveModal(note.id); }}
-                                          className="flex items-center gap-2 text-xs font-bold font-mono px-3 py-1 border-2 border-retro-text text-retro-text hover:bg-retro-text hover:text-retro-bg transition-colors"
-                                        >
-                                          <Bookmark size={14} /> {t('prof.save')}
-                                        </button>
-                                        <button
-                                          onClick={(e) => { e.stopPropagation(); handleDownloadNote(note.id); }}
-                                          disabled={downloadingNoteId === note.id}
-                                          className="flex items-center gap-2 text-xs font-bold font-mono px-3 py-1 border-2 border-retro-text text-retro-text hover:bg-retro-text hover:text-retro-bg transition-colors disabled:opacity-50"
-                                        >
-                                          {downloadingNoteId === note.id ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />} İndir
-                                        </button>
-                                      </>
-                                    )}
-                                    <button
-                                      onClick={(e) => { e.stopPropagation(); handlePraise(course.id, note.id); }}
-                                      className="flex items-center gap-2 text-xs font-bold font-mono px-3 py-1 border-2 border-retro-accent text-retro-accent hover:bg-retro-accent hover:text-retro-bg transition-colors"
-                                    >
-                                      <span>🙌</span> {t('prof.praise')} {note.praise_count > 0 && `(${note.praise_count})`}
-                                    </button>
-                                  </div>
-                                </div>
-                              </div>
-                            )}
+                        {course.description && (
+                          <p className="text-retro-muted font-mono text-sm truncate">{course.description}</p>
+                        )}
+                      </div>
+                      <div className="flex-shrink-0 text-retro-muted group-hover:text-retro-accent transition-colors">
+                        {isLoadingNotes ? (
+                          <Loader2 size={20} className="animate-spin" />
+                        ) : isExpanded ? (
+                          <ChevronUp size={20} />
+                        ) : (
+                          <ChevronDown size={20} />
+                        )}
+                      </div>
+                    </button>
+
+                    {/* Expanded notes panel */}
+                    {isExpanded && (
+                      <div className="mt-4 pt-4 border-t-2 border-dashed border-retro-border space-y-6">
+                        {isLoadingNotes ? (
+                          <div className="flex justify-center py-6">
+                            <Loader2 className="animate-spin text-retro-accent" size={24} />
                           </div>
-                        ))
-                      )}
+                        ) : !notes || notes.length === 0 ? (
+                          <p className="text-retro-muted font-mono text-sm text-center py-4">
+                            {t('prof.no_notes')}
+                          </p>
+                        ) : (
+                          notes.map(note => (
+                            <div key={note.id} className={`border-l-2 ${note.is_locked ? 'border-retro-danger/50' : 'border-retro-accent'} pl-4`}>
+                              {note.is_locked ? (
+                                /* ── Locked Note: Preview + Click to Unlock ── */
+                                <div
+                                  className="cursor-pointer group"
+                                  onClick={() => { setTargetUnlockNote(note); setUnlockModalOpen(true); setUnlockError(''); setShareCode(''); }}
+                                >
+                                  <div className="flex items-start gap-4 flex-col md:flex-row">
+                                    {/* Blurred placeholder image */}
+                                    <div className="md:w-40 flex-shrink-0">
+                                      <div className="w-16 h-16 bg-retro-border/30 border-2 border-retro-border flex items-center justify-center">
+                                        <Lock size={20} className="text-retro-danger/60" />
+                                      </div>
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-2 mb-1">
+                                        <Lock size={14} className="text-retro-danger" />
+                                        <h4 className="font-bold uppercase text-base">{note.title}</h4>
+                                      </div>
+                                      <div className="text-retro-muted font-mono text-xs mb-2">
+                                        {format(new Date(note.created_at), 'MMM dd, yyyy')}
+                                      </div>
+                                      {/* Preview: first sentence only */}
+                                      {note.content && (
+                                        <p className="text-retro-muted font-serif text-sm leading-relaxed italic">
+                                          {note.content.split('.')[0]}...
+                                        </p>
+                                      )}
+                                      <div className="mt-3 flex items-center gap-2">
+                                        <span className="inline-flex items-center gap-1 px-3 py-1 bg-retro-accent/10 border border-retro-accent/30 text-retro-accent font-mono text-xs font-bold group-hover:bg-retro-accent group-hover:text-retro-bg transition-colors">
+                                          <Unlock size={12} />
+                                          {note.paps_price > 0 ? `${note.paps_price} PAPS ile Aç` : 'PIN ile Aç'}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              ) : (
+                                /* ── Unlocked Note: Full content ── */
+                                <div className="flex items-start gap-4 flex-col md:flex-row">
+                                  {/* Images */}
+                                  {note.images && note.images.length > 0 && (
+                                    <div className="flex gap-2 flex-wrap md:w-40 flex-shrink-0">
+                                      {note.images.map((img, idx) => (
+                                        <div
+                                          key={idx}
+                                          className="w-16 h-16 bg-retro-bg border-2 border-retro-border overflow-hidden cursor-zoom-in group relative"
+                                          onClick={() => openLightbox(note.images, idx)}
+                                        >
+                                          <img src={img} alt="" className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
+                                          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 bg-black/30 transition-opacity">
+                                            <ZoomIn size={14} className="text-white" />
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                  {/* Content */}
+                                  <div className="flex-1 min-w-0 flex flex-col justify-between">
+                                    <div>
+                                      <h4 className="font-bold uppercase text-base mb-1">{note.title}</h4>
+                                      <div className="text-retro-muted font-mono text-xs mb-2">
+                                        {format(new Date(note.created_at), 'MMM dd, yyyy')}
+                                      </div>
+                                      {note.content && (
+                                        <p className="text-retro-text font-serif text-sm leading-relaxed whitespace-pre-wrap line-clamp-6">
+                                          {note.content}
+                                        </p>
+                                      )}
+                                    </div>
+                                    <div className="mt-4 flex justify-end gap-2">
+                                      {isAuthenticated && (
+                                        <>
+                                          <button
+                                            onClick={(e) => { e.stopPropagation(); openSaveModal(note.id); }}
+                                            className="flex items-center gap-2 text-xs font-bold font-mono px-3 py-1 border-2 border-retro-text text-retro-text hover:bg-retro-text hover:text-retro-bg transition-colors"
+                                          >
+                                            <Bookmark size={14} /> {t('prof.save')}
+                                          </button>
+                                          <button
+                                            onClick={(e) => { e.stopPropagation(); handleDownloadNote(note.id); }}
+                                            disabled={downloadingNoteId === note.id}
+                                            className="flex items-center gap-2 text-xs font-bold font-mono px-3 py-1 border-2 border-retro-text text-retro-text hover:bg-retro-text hover:text-retro-bg transition-colors disabled:opacity-50"
+                                          >
+                                            {downloadingNoteId === note.id ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />} İndir
+                                          </button>
+                                        </>
+                                      )}
+                                      <button
+                                        onClick={(e) => { e.stopPropagation(); handlePraise(course.id, note.id); }}
+                                        className="flex items-center gap-2 text-xs font-bold font-mono px-3 py-1 border-2 border-retro-accent text-retro-accent hover:bg-retro-accent hover:text-retro-bg transition-colors"
+                                      >
+                                        <span>🙌</span> {t('prof.praise')} {note.praise_count > 0 && `(${note.praise_count})`}
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </Card>
+                );
+              })}
+            </div>
+          )
+        ) : (
+          /* Purchased Notes Tab */
+          purchasedNotes.length === 0 ? (
+            <div className="border-2 border-dashed border-retro-border p-12 text-center text-retro-muted font-mono">
+              <BookOpen className="mx-auto mb-4 opacity-50" size={48} />
+              <p>Henüz satın aldığınız bir not bulunmuyor.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-6">
+              {purchasedNotes.map(note => (
+                <Card key={`purchased-${note.id}`} className="border-2 border-retro-accent shadow-solid-accent overflow-hidden p-6 space-y-6">
+                  {/* Unlocked Note: Full content directly since purchased notes are always unlocked for the given user */}
+                  <div className="flex items-start gap-4 flex-col md:flex-row">
+                    {/* Images */}
+                    {note.images && note.images.length > 0 && (
+                      <div className="flex gap-2 flex-wrap md:w-40 flex-shrink-0">
+                        {note.images.map((img, idx) => (
+                          <div
+                            key={idx}
+                            className="w-16 h-16 bg-retro-bg border-2 border-retro-border overflow-hidden cursor-zoom-in group relative"
+                            onClick={() => openLightbox(note.images, idx)}
+                          >
+                            <img src={img} alt="" className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
+                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 bg-black/30 transition-opacity">
+                              <ZoomIn size={14} className="text-white" />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {/* Content */}
+                    <div className="flex-1 min-w-0 flex flex-col justify-between">
+                      <div>
+                        <div className="flex justify-between items-start gap-4">
+                          <h4 className="font-bold uppercase text-xl mb-1">{note.title}</h4>
+                          <span className="bg-retro-accent/20 text-retro-accent text-xs px-2 py-0.5 border border-retro-accent/50 font-mono">Satın Alınan</span>
+                        </div>
+                        <div className="text-retro-muted font-mono text-xs mb-4">
+                          {format(new Date(note.created_at), 'MMM dd, yyyy')} • Not Sahibi: @{(note as any).owner_username || 'Bilinmiyor'}
+                        </div>
+                        {note.content && (
+                          <p className="text-retro-text font-serif text-sm leading-relaxed whitespace-pre-wrap">
+                            {note.content}
+                          </p>
+                        )}
+                      </div>
+                      <div className="mt-4 flex justify-end gap-2">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); openSaveModal(note.id); }}
+                          className="flex items-center gap-2 text-xs font-bold font-mono px-3 py-1 border-2 border-retro-text text-retro-text hover:bg-retro-text hover:text-retro-bg transition-colors"
+                        >
+                          <Bookmark size={14} /> {t('prof.save')}
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleDownloadNote(note.id); }}
+                          disabled={downloadingNoteId === note.id}
+                          className="flex items-center gap-2 text-xs font-bold font-mono px-3 py-1 border-2 border-retro-text text-retro-text hover:bg-retro-text hover:text-retro-bg transition-colors disabled:opacity-50"
+                        >
+                          {downloadingNoteId === note.id ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />} İndir
+                        </button>
+                      </div>
                     </div>
-                  )}
+                  </div>
                 </Card>
-              );
-            })}
-          </div>
+              ))}
+            </div>
+          )
         )}
       </div>
 
