@@ -28,9 +28,11 @@ This document captures the current state of JOTROW as of **March 8, 2026**, foll
 - **Fix Logic**: `storage.py` now checks if the endpoint starts with `localhost` or `minio`. If not, it forces `secure=True`.
 
 ## 🚧 What's Next? (Priority List)
-1. **Praise System Expansion**: The Praise logic is in place, but a "Trending" list on the Explore page based on praise counts would be the next logical step.
+1. **i18n Polish (URGENT)**: 
+    - The current language toggle is a button that changes text, causing the entire Navbar content to shift ("jump"). **Replace this with a fixed-width Dropdown.**
+    - `Home.tsx` and `Dashboard.tsx` are still using hardcoded English strings. These need to be moved to `LanguageContext.tsx`.
 2. **Avatar Support**: The infrastructure for MinIO uploads is fully battle-tested. Adding a "Change Avatar" feature in Settings is now a low-effort task.
-3. **Session Management**: Auth currently relies on a single token in `localStorage`. Adding Refresh Token logic would improve the UX.
+3. **Praise System Expansion**: The Praise logic is in place, but a "Trending" list on the Explore page based on praise counts would be the next logical step.
 
 ## ⚠️ Gotchas
 - When testing on the Render free tier, the first request (or upload) might time out or be slow while the instance spins up.

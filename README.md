@@ -140,10 +140,13 @@ docker-compose up --build
 
 ### 🔲 Sonraki Developer İçin Yapılacaklar
 
+#### Yüksek Öncelik (Bugs & Polish)
+- [ ] **i18n Eksik Çeviriler:** Home (Ana Sayfa) ve Dashboard sayfalarındaki statik metinler henüz `LanguageContext`'e bağlanmadı.
+- [ ] **Navbar Layout Shift:** Dil değişiminde (EN/TR) metin genişliği değiştiği için butonlar yanlara "zıplıyor". Bunun yerine sabit genişlikli bir **Dropdown** menü eklenmeli.
+
 #### Orta Öncelik
 - [ ] **Avatar Yükleme:** Kullanıcı profil fotoğrafı yükleyebilmeli (Backend kütüphaneleri hazır).
 - [ ] **Arama & Filtreleme:** Keşfet sayfasındaki kullanıcı arama özelliğine not içeriği araması eklenebilir.
-- [ ] **Ön Bellek (Caching):** Not listeleri için Redis veya frontend tarafında React Query entegrasyonu.
 
 #### Düşük Öncelik / Production'a Geçiş
 - [ ] **PAPS Payout:** Kullanıcının kazandığı PAPS birimlerini gerçek paraya dönüştürme mantığı.
