@@ -84,6 +84,8 @@ const Profile: React.FC<ProfileProps> = ({ isPublic = false }) => {
   const [selectedCourseId, setSelectedCourseId] = useState<number | string>('');
   const [isSaving, setIsSaving] = useState(false);
   const [downloadingNoteId, setDownloadingNoteId] = useState<number | null>(null);
+  const [newFolderName, setNewFolderName] = useState('');
+  const [isCreatingFolder, setIsCreatingFolder] = useState(false);
 
   // Determine if the logged-in user is viewing their own profile
   let loggedInUsername = '';
@@ -240,18 +242,41 @@ const Profile: React.FC<ProfileProps> = ({ isPublic = false }) => {
   };
 
   const handleSaveNote = async () => {
-    if (!noteToSave || !selectedCourseId) return;
+    if (!noteToSave) return;
     setIsSaving(true);
     try {
-      await api.post(`/api/sharing/notes/${noteToSave}/save`, { course_id: Number(selectedCourseId) });
+      const body: any = {};
+      if (selectedCourseId && selectedCourseId !== 'root') {
+        body.course_id = Number(selectedCourseId);
+      }
+      await api.post(`/api/sharing/notes/${noteToSave}/save`, body);
       setSaveModalOpen(false);
       setNoteToSave(null);
-      alert("Note saved successfully!");
+      alert("Not başarıyla kaydedildi!");
     } catch (err) {
       console.error("Failed to save note", err);
-      alert("Failed to save note.");
+      alert("Not kaydedilemedi.");
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleCreateFolderAndSave = async () => {
+    if (!noteToSave || !newFolderName.trim()) return;
+    setIsCreatingFolder(true);
+    try {
+      const courseRes = await api.post('/api/courses', { title: newFolderName.trim(), description: '' });
+      const newCourseId = courseRes.data.id;
+      await api.post(`/api/sharing/notes/${noteToSave}/save`, { course_id: newCourseId });
+      setSaveModalOpen(false);
+      setNoteToSave(null);
+      setNewFolderName('');
+      alert("Yeni klasör oluşturuldu ve not kaydedildi!");
+    } catch (err) {
+      console.error("Failed to create folder and save", err);
+      alert("Klasör oluşturulamadı.");
+    } finally {
+      setIsCreatingFolder(false);
     }
   };
 
@@ -669,26 +694,23 @@ const Profile: React.FC<ProfileProps> = ({ isPublic = false }) => {
         <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
           <Card className="max-w-md w-full border-retro-accent shadow-solid-accent relative">
             <button
-              onClick={() => setSaveModalOpen(false)}
+              onClick={() => { setSaveModalOpen(false); setNewFolderName(''); }}
               className="absolute top-4 right-4 text-retro-muted hover:text-retro-text"
             >
               <X size={24} />
             </button>
-            <h2 className="text-2xl font-bold uppercase tracking-tight mb-6">{t('prof.save_note_title')}</h2>
+            <h2 className="text-2xl font-bold uppercase tracking-tight mb-6">Notu Kaydet</h2>
 
-            {userCourses.length === 0 ? (
-              <div className="text-retro-muted font-mono text-center py-4">
-                {t('prof.no_save_course')}
-              </div>
-            ) : (
-              <div className="space-y-4">
+            <div className="space-y-4">
+              {/* Option 1: Save to existing folder */}
+              {userCourses.length > 0 && (
                 <div className="flex flex-col w-full">
                   <label className="mb-2 text-sm font-bold text-retro-muted tracking-widest uppercase">
-                    {t('prof.select_course')}
+                    Mevcut Klasöre Kaydet
                   </label>
                   <div className="relative border-2 border-retro-border bg-retro-bg">
                     <select
-                      className="w-full appearance-none bg-transparent py-3 px-4 font-mono text-retro-text outline-none focus:border-retro-accent focus:shadow-[4px_4px_0px_#FFD700] transition-all cursor-pointer"
+                      className="w-full appearance-none bg-transparent py-3 px-4 font-mono text-retro-text outline-none focus:border-retro-accent transition-all cursor-pointer"
                       value={selectedCourseId}
                       onChange={(e) => setSelectedCourseId(e.target.value)}
                     >
@@ -702,27 +724,73 @@ const Profile: React.FC<ProfileProps> = ({ isPublic = false }) => {
                       <ChevronDown size={20} />
                     </div>
                   </div>
-                </div>
-
-                <div className="flex justify-end gap-3 pt-4">
-                  <Button
-                    variant="ghost"
-                    onClick={() => setSaveModalOpen(false)}
-                    disabled={isSaving}
-                  >
-                    {t('prof.cancel')}
-                  </Button>
                   <Button
                     onClick={handleSaveNote}
                     disabled={isSaving || !selectedCourseId}
-                    className="flex items-center gap-2"
+                    className="mt-2 w-full flex items-center justify-center gap-2"
                   >
                     {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Bookmark size={16} />}
-                    {isSaving ? t('prof.saving') : t('prof.save_to')}
+                    Klasöre Kaydet
                   </Button>
                 </div>
+              )}
+
+              {/* Divider */}
+              <div className="flex items-center gap-3">
+                <div className="flex-1 h-px bg-retro-border" />
+                <span className="text-retro-muted text-xs font-mono">VEYA</span>
+                <div className="flex-1 h-px bg-retro-border" />
               </div>
-            )}
+
+              {/* Option 2: Save to root (no folder) */}
+              <Button
+                variant="ghost"
+                onClick={() => { setSelectedCourseId('root'); handleSaveNote(); }}
+                disabled={isSaving}
+                className="w-full border-2 border-retro-border flex items-center justify-center gap-2"
+              >
+                <Bookmark size={16} /> Klasörsüz Kaydet (Kütüphaneme)
+              </Button>
+
+              {/* Divider */}
+              <div className="flex items-center gap-3">
+                <div className="flex-1 h-px bg-retro-border" />
+                <span className="text-retro-muted text-xs font-mono">VEYA</span>
+                <div className="flex-1 h-px bg-retro-border" />
+              </div>
+
+              {/* Option 3: Create new folder and save */}
+              <div className="flex flex-col w-full">
+                <label className="mb-2 text-sm font-bold text-retro-muted tracking-widest uppercase">
+                  Yeni Klasör Oluştur ve Kaydet
+                </label>
+                <input
+                  type="text"
+                  value={newFolderName}
+                  onChange={(e) => setNewFolderName(e.target.value)}
+                  placeholder="Klasör adı..."
+                  className="w-full py-3 px-4 font-mono text-retro-text bg-retro-bg border-2 border-retro-border outline-none focus:border-retro-accent transition-all"
+                />
+                <Button
+                  onClick={handleCreateFolderAndSave}
+                  disabled={isCreatingFolder || !newFolderName.trim()}
+                  className="mt-2 w-full flex items-center justify-center gap-2"
+                >
+                  {isCreatingFolder ? <Loader2 size={16} className="animate-spin" /> : <BookOpen size={16} />}
+                  Oluştur ve Kaydet
+                </Button>
+              </div>
+
+              {/* Cancel */}
+              <div className="flex justify-end pt-2">
+                <Button
+                  variant="ghost"
+                  onClick={() => { setSaveModalOpen(false); setNewFolderName(''); }}
+                >
+                  İptal
+                </Button>
+              </div>
+            </div>
           </Card>
         </div>
       )}

@@ -29,7 +29,7 @@ class VerifyCodeRequest(BaseModel):
     share_code: str
 
 class SaveNoteRequest(BaseModel):
-    course_id: int
+    course_id: Optional[int] = None
 
 class VerifyResponse(BaseModel):
     access_token: str
@@ -173,33 +173,41 @@ def save_note(
     current_user: models.User = Depends(deps.get_current_user)
 ) -> Any:
     """
-    Save a public note into the authenticated user's selected course.
+    Save a public note into the authenticated user's library.
+    If course_id is provided, saves into that course.
+    If course_id is None, saves to the root library (no course).
     """
     note = db.query(models.Note).filter(models.Note.id == note_id).first()
     if not note:
         raise HTTPException(status_code=404, detail="Note not found")
-        
-    course = db.query(models.Course).filter(
-        models.Course.id == request.course_id,
-        models.Course.owner_id == current_user.id
-    ).first()
-    if not course:
-        raise HTTPException(status_code=403, detail="Not authorized to save to this course")
-        
-    original_course = db.query(models.Course).filter(models.Course.id == note.course_id).first()
-    original_author_user = db.query(models.User).filter(models.User.id == original_course.owner_id).first()
-    
+
+    target_course_id = None
+    if request.course_id:
+        course = db.query(models.Course).filter(
+            models.Course.id == request.course_id,
+            models.Course.owner_id == current_user.id
+        ).first()
+        if not course:
+            raise HTTPException(status_code=403, detail="Not authorized to save to this course")
+        target_course_id = course.id
+
+    # Get original author
+    original_author_name = note.original_author
+    if not original_author_name:
+        original_author_user = db.query(models.User).filter(models.User.id == note.owner_id).first()
+        original_author_name = original_author_user.username if original_author_user else "unknown"
+
     new_note = models.Note(
         title=note.title,
         content=note.content,
-        course_id=request.course_id,
+        course_id=target_course_id,
         owner_id=current_user.id,
-        original_author=note.original_author or original_author_user.username
+        original_author=original_author_name
     )
     db.add(new_note)
     db.commit()
     db.refresh(new_note)
-    
+
     for img in note.images:
         new_img = models.NoteImage(
             note_id=new_note.id,
@@ -207,7 +215,7 @@ def save_note(
         )
         db.add(new_img)
     db.commit()
-    
+
     return {"message": "Note saved successfully", "note_id": new_note.id}
 
 @router.get("/{username}/courses")
