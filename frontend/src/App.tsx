@@ -28,39 +28,42 @@ const Root = () => {
 };
 
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { LanguageProvider } from './context/LanguageContext';
 
 function App() {
   return (
     <ErrorBoundary>
-      <AuthProvider>
-        <Router>
-          <div className="min-h-screen bg-retro-bg text-retro-text selection:bg-retro-accent selection:text-retro-bg">
-            <Navbar />
-            <main className="max-w-7xl mx-auto">
-              <Routes>
-                <Route path="/" element={<Root />} />
-                <Route path="/course/:id" element={
-                  <ProtectedRoute>
-                    <CourseDetail />
-                  </ProtectedRoute>
-                } />
-                <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
-                <Route path="/explore" element={<Explore />} />
-                <Route path="/upload" element={<Upload />} />
-                <Route path="/profile" element={<Profile />} />
-                <Route path="/settings" element={
-                  <ProtectedRoute>
-                    <Settings />
-                  </ProtectedRoute>
-                } />
-                <Route path="/u/:username" element={<Profile isPublic={true} />} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </main>
-          </div>
-        </Router>
-      </AuthProvider>
+      <LanguageProvider>
+        <AuthProvider>
+          <Router>
+            <div className="min-h-screen bg-retro-bg text-retro-text selection:bg-retro-accent selection:text-retro-bg">
+              <Navbar />
+              <main className="max-w-7xl mx-auto">
+                <Routes>
+                  <Route path="/" element={<Root />} />
+                  <Route path="/course/:id" element={
+                    <ProtectedRoute>
+                      <CourseDetail />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/register" element={<Register />} />
+                  <Route path="/explore" element={<Explore />} />
+                  <Route path="/upload" element={<Upload />} />
+                  <Route path="/profile" element={<Profile />} />
+                  <Route path="/settings" element={
+                    <ProtectedRoute>
+                      <Settings />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/u/:username" element={<Profile isPublic={true} />} />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </main>
+            </div>
+          </Router>
+        </AuthProvider>
+      </LanguageProvider>
     </ErrorBoundary>
   );
 }

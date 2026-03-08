@@ -1,15 +1,17 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { Card } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
 import {
   Lock, Unlock, Loader2, BookOpen, ChevronDown, ChevronUp,
-  X, ChevronLeft, ChevronRight, ZoomIn, Bookmark
+  X, ChevronLeft, ChevronRight, ZoomIn, Bookmark, Settings
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useAuth } from '../context/AuthContext';
+import { jwtDecode } from 'jwt-decode';
+import { useLanguage } from '../context/LanguageContext';
 
 interface ProfileProps {
   isPublic?: boolean;
@@ -68,12 +70,21 @@ const Profile: React.FC<ProfileProps> = ({ isPublic = false }) => {
   const [lightboxIndex, setLightboxIndex] = useState(0);
 
   // Save Note Feature
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, token } = useAuth();
+  const { t } = useLanguage();
+  const navigate = useNavigate();
   const [saveModalOpen, setSaveModalOpen] = useState(false);
   const [noteToSave, setNoteToSave] = useState<number | null>(null);
   const [userCourses, setUserCourses] = useState<Course[]>([]);
   const [selectedCourseId, setSelectedCourseId] = useState<number | string>('');
   const [isSaving, setIsSaving] = useState(false);
+
+  // Determine if the logged-in user is viewing their own profile
+  let loggedInUsername = '';
+  if (token) {
+    try { loggedInUsername = (jwtDecode(token) as any).sub || ''; } catch { }
+  }
+  const isOwnProfile = isAuthenticated && loggedInUsername === username;
 
   useEffect(() => {
     if (isPublic && username) {
@@ -391,7 +402,7 @@ const Profile: React.FC<ProfileProps> = ({ isPublic = false }) => {
               </p>
             )}
           </div>
-          <div className="flex gap-6 flex-shrink-0">
+          <div className="flex gap-6 flex-shrink-0 items-end">
             <div className="text-right font-mono">
               <div className="text-xs text-retro-muted uppercase tracking-tighter">COURSES</div>
               <div className="text-2xl font-bold text-retro-accent">{courses.length}</div>
@@ -401,6 +412,16 @@ const Profile: React.FC<ProfileProps> = ({ isPublic = false }) => {
                 <div className="text-xs text-retro-muted uppercase tracking-tighter">NOTES</div>
                 <div className="text-2xl font-bold text-retro-accent">{profile.note_count}</div>
               </div>
+            )}
+            {isOwnProfile && (
+              <Button
+                variant="ghost"
+                onClick={() => navigate('/settings')}
+                className="flex items-center gap-2 border-2 border-retro-border hover:border-retro-accent"
+              >
+                <Settings size={16} />
+                <span className="font-mono text-sm">{t('profile.settings')}</span>
+              </Button>
             )}
           </div>
         </div>

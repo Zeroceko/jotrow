@@ -1,11 +1,14 @@
 import React from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LogOut, BookText, PlusCircle, Settings } from 'lucide-react';
+import { LogOut, BookText, PlusCircle, User, Globe } from 'lucide-react';
 import { Button } from './ui/Button';
+import { jwtDecode } from 'jwt-decode';
+import { useLanguage } from '../context/LanguageContext';
 
 export const Navbar: React.FC = () => {
-  const { isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, logout, token } = useAuth();
+  const { t, language, setLanguage } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -26,6 +29,20 @@ export const Navbar: React.FC = () => {
     }
   };
 
+  let username = '';
+  if (token) {
+    try {
+      const decoded: any = jwtDecode(token);
+      username = decoded.sub || '';
+    } catch {
+      // invalid token
+    }
+  }
+
+  const toggleLanguage = () => {
+    setLanguage(language === 'en' ? 'tr' : 'en');
+  };
+
   return (
     <nav className="border-b-2 border-retro-border bg-retro-bg/90 backdrop-blur-sm sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -40,33 +57,43 @@ export const Navbar: React.FC = () => {
           </Link>
 
           <div className="flex items-center gap-4">
+            <button
+              onClick={toggleLanguage}
+              className="text-retro-muted hover:text-retro-text font-mono text-sm border-2 border-transparent hover:border-retro-muted px-2 py-1 flex items-center gap-1 transition-colors"
+              title="Toggle Language"
+            >
+              <Globe size={16} />
+              {language.toUpperCase()}
+            </button>
+
             {isAuthenticated ? (
               <>
                 <Link to="/explore" className="text-retro-muted hover:text-retro-text font-medium transition-colors mr-2">
-                  EXPLORE
+                  {t('nav.explore')}
                 </Link>
-                <Link to="/settings" className="text-retro-muted hover:text-retro-text transition-colors">
-                  <Settings size={18} />
+                <Link to={`/u/${username}`} className="text-retro-muted hover:text-retro-text font-medium transition-colors flex items-center gap-2 border-2 border-transparent hover:border-retro-muted px-2 py-1 rounded">
+                  <User size={18} />
+                  <span className="hidden sm:inline">{t('nav.profile')}</span>
                 </Link>
                 <Button variant="ghost" onClick={handleUploadClick} className="flex gap-2 items-center">
                   <PlusCircle size={18} />
-                  <span className="hidden sm:inline">UPLOAD_</span>
+                  <span className="hidden sm:inline">{t('nav.upload')}</span>
                 </Button>
                 <Button variant="secondary" onClick={handleLogout} className="flex gap-2 items-center px-4">
                   <LogOut size={16} />
-                  <span className="hidden sm:inline">LOGOUT_</span>
+                  <span className="hidden sm:inline">{t('nav.logout')}</span>
                 </Button>
               </>
             ) : (
               <>
                 <Link to="/explore" className="text-retro-muted hover:text-retro-text font-medium transition-colors mr-4">
-                  Explore
+                  {t('nav.explore')}
                 </Link>
                 <Link to="/login" className="text-retro-muted hover:text-retro-text font-medium transition-colors">
-                  Login
+                  {t('nav.login')}
                 </Link>
                 <Link to="/register">
-                  <Button variant="primary">Register</Button>
+                  <Button variant="primary">{t('nav.register')}</Button>
                 </Link>
               </>
             )}
