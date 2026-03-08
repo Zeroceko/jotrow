@@ -191,18 +191,21 @@ const Dashboard: React.FC = () => {
           <h1 className="text-4xl font-bold uppercase tracking-tighter">{t('dash.title')}<span className="text-retro-accent">_</span></h1>
           <p className="text-retro-muted font-mono mt-2 text-sm">{t('dash.subtitle')}</p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex gap-4">
           <Button
             variant="secondary"
             onClick={() => setIsCreating(!isCreating)}
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 px-6 py-3 border-2 border-retro-accent text-retro-accent hover:bg-retro-accent hover:text-retro-bg font-bold tracking-widest uppercase transition-colors"
           >
-            <FolderPlus size={16} />
+            <FolderPlus size={18} />
             {isCreating ? t('dash.cancel') : t('dash.new_folder')}
           </Button>
-          <Button onClick={() => navigate('/upload')} className="flex items-center gap-2">
-            <Plus size={16} />
-            {t('dash.quick_add')}
+          <Button
+            onClick={() => navigate('/upload')}
+            className="flex items-center gap-2 px-6 py-3 bg-retro-accent text-retro-bg font-bold tracking-widest uppercase hover:opacity-90 shadow-solid-accent transition-all"
+          >
+            <Plus size={18} />
+            {t('nav.upload')}
           </Button>
         </div>
       </div>

@@ -6,14 +6,14 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { useAuth } from '../context/AuthContext';
 import {
-    User, ShieldCheck, Wallet, TrendingUp, Settings2,
+    User, ShieldCheck, Settings2,
     Loader2, Check, AlertCircle, LogOut, Lock
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
-type Tab = 'profile' | 'privacy' | 'wallet' | 'earnings' | 'account';
+type Tab = 'profile' | 'privacy' | 'account';
 
 interface UserSettings {
     id: number;
@@ -29,26 +29,7 @@ interface UserSettings {
     paps_balance: number;
 }
 
-interface Transaction {
-    id: number;
-    type: string;
-    amount: number;
-    description: string | null;
-    created_at: string;
-}
 
-interface WalletData {
-    balance: number;
-    transactions: Transaction[];
-}
-
-interface EarningsData {
-    earned: number;
-    spent: number;
-    net: number;
-    week_start: string;
-    week_end: string;
-}
 
 // ── Helper components ───────────────────────────────────────────────────────
 
@@ -68,13 +49,7 @@ const SectionTitle: React.FC<{ children: React.ReactNode }> = ({ children }) => 
     </h2>
 );
 
-const typeColor: Record<string, string> = {
-    sale: 'text-retro-accent',
-    topup: 'text-retro-accent',
-    purchase: 'text-retro-danger',
-    fee: 'text-retro-danger',
-    refund: 'text-yellow-400',
-};
+
 
 // ── Main Component ───────────────────────────────────────────────────────────
 
@@ -86,9 +61,7 @@ const Settings: React.FC = () => {
     const [settings, setSettings] = useState<UserSettings | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
-    // Wallet / earnings data
-    const [walletData, setWalletData] = useState<WalletData | null>(null);
-    const [earningsData, setEarningsData] = useState<EarningsData | null>(null);
+
 
     // Profile form state
     const [displayName, setDisplayName] = useState('');
@@ -143,14 +116,7 @@ const Settings: React.FC = () => {
         fetchSettings();
     }, []);
 
-    useEffect(() => {
-        if (activeTab === 'wallet' && !walletData) {
-            api.get('/api/settings/wallet').then(res => setWalletData(res.data)).catch(() => { });
-        }
-        if (activeTab === 'earnings' && !earningsData) {
-            api.get('/api/settings/earnings').then(res => setEarningsData(res.data)).catch(() => { });
-        }
-    }, [activeTab]);
+
 
     const handleSaveProfile = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -240,8 +206,6 @@ const Settings: React.FC = () => {
     const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
         { id: 'profile', label: t('set.profile'), icon: <User size={16} /> },
         { id: 'privacy', label: t('set.privacy'), icon: <ShieldCheck size={16} /> },
-        { id: 'wallet', label: t('set.wallet'), icon: <Wallet size={16} /> },
-        { id: 'earnings', label: t('set.earnings'), icon: <TrendingUp size={16} /> },
         { id: 'account', label: t('set.account'), icon: <Settings2 size={16} /> },
     ];
 
@@ -427,94 +391,7 @@ const Settings: React.FC = () => {
                         </Card>
                     )}
 
-                    {/* ── Wallet Tab ── */}
-                    {activeTab === 'wallet' && (
-                        <div className="space-y-6">
-                            <Card>
-                                <SectionTitle>{t('set.paps_balance')}</SectionTitle>
-                                <div className="flex items-end gap-4">
-                                    <div>
-                                        <div className="text-retro-muted font-mono text-xs uppercase tracking-wider mb-1">{t('set.available')}</div>
-                                        <div className="text-5xl font-bold text-retro-accent font-mono">
-                                            {walletData?.balance ?? settings?.paps_balance ?? 0}
-                                            <span className="text-xl ml-2 text-retro-muted">PAPS</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </Card>
 
-                            <Card>
-                                <SectionTitle>{t('set.tx_history')}</SectionTitle>
-                                {!walletData ? (
-                                    <div className="flex justify-center py-8"><Loader2 className="animate-spin text-retro-accent" size={24} /></div>
-                                ) : walletData.transactions.length === 0 ? (
-                                    <div className="text-center py-12 text-retro-muted font-mono">
-                                        <Wallet size={40} className="mx-auto mb-4 opacity-30" />
-                                        <p className="text-sm">{t('set.no_tx')}</p>
-                                    </div>
-                                ) : (
-                                    <ul className="divide-y-2 divide-retro-border">
-                                        {walletData.transactions.map(tx => (
-                                            <li key={tx.id} className="flex items-center justify-between py-3 gap-4">
-                                                <div className="flex-1 min-w-0">
-                                                    <div className={`text-xs font-bold font-mono uppercase ${typeColor[tx.type] || 'text-retro-muted'}`}>
-                                                        {tx.type}
-                                                    </div>
-                                                    {tx.description && (
-                                                        <div className="text-retro-muted font-mono text-xs truncate">{tx.description}</div>
-                                                    )}
-                                                    <div className="text-retro-muted font-mono text-[10px] mt-0.5">
-                                                        {new Date(tx.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
-                                                    </div>
-                                                </div>
-                                                <div className={`font-bold font-mono text-sm flex-shrink-0 ${tx.amount > 0 ? 'text-retro-accent' : 'text-retro-danger'}`}>
-                                                    {tx.amount > 0 ? `+${tx.amount}` : tx.amount} PAPS
-                                                </div>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                )}
-                            </Card>
-                        </div>
-                    )}
-
-                    {/* ── Earnings Tab ── */}
-                    {activeTab === 'earnings' && (
-                        <Card>
-                            <SectionTitle>{t('set.this_week')}</SectionTitle>
-                            {!earningsData ? (
-                                <div className="flex justify-center py-8"><Loader2 className="animate-spin text-retro-accent" size={24} /></div>
-                            ) : (
-                                <div className="space-y-6">
-                                    <div className="grid grid-cols-3 gap-4">
-                                        {[
-                                            { label: t('set.earned'), value: earningsData.earned, color: 'text-retro-accent' },
-                                            { label: t('set.spent'), value: earningsData.spent, color: 'text-retro-danger' },
-                                            { label: t('set.net'), value: earningsData.net, color: earningsData.net >= 0 ? 'text-retro-accent' : 'text-retro-danger' },
-                                        ].map(({ label, value, color }) => (
-                                            <div key={label} className="border-2 border-retro-border p-4 text-center">
-                                                <div className="text-retro-muted font-mono text-xs uppercase tracking-wider mb-2">{label}</div>
-                                                <div className={`text-3xl font-bold font-mono ${color}`}>
-                                                    {earningsData.net === value && value < 0 ? '' : ''}{value}
-                                                    <div className="text-xs text-retro-muted mt-1">PAPS</div>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                    <p className="text-retro-muted font-mono text-xs text-center">
-                                        {t('set.week_of')} {new Date(earningsData.week_start).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
-                                        {' '}– {new Date(earningsData.week_end).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
-                                    </p>
-                                    {earningsData.earned === 0 && earningsData.spent === 0 && (
-                                        <div className="text-center border-2 border-dashed border-retro-border p-8 text-retro-muted font-mono text-sm">
-                                            <TrendingUp size={32} className="mx-auto mb-3 opacity-30" />
-                                            {t('set.no_activity')}
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                        </Card>
-                    )}
 
                     {/* ── Account Tab ── */}
                     {activeTab === 'account' && (

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LogOut, BookText, PlusCircle, User, Globe, ChevronDown } from 'lucide-react';
+import { LogOut, BookText, PlusCircle, User, Globe, ChevronDown, Wallet } from 'lucide-react';
 import { Button } from './ui/Button';
 import { jwtDecode } from 'jwt-decode';
 import { useLanguage } from '../context/LanguageContext';
@@ -73,15 +73,19 @@ export const Navbar: React.FC = () => {
             {isAuthenticated ? (
               <>
                 <Link to="/explore" className="text-retro-muted hover:text-retro-text font-medium transition-colors mr-2">
-                  {t('nav.explore')}
+                  {t('nav.explore') || 'EXPLORE'}
+                </Link>
+                <Link to="/wallet" className="text-retro-muted hover:text-retro-text font-medium transition-colors flex items-center gap-2 border-2 border-transparent hover:border-retro-muted px-2 py-1 rounded">
+                  <Wallet size={18} />
+                  <span className="hidden md:inline">{t('set.wallet') || 'WALLET'}</span>
                 </Link>
                 <Link to={`/u/${username}`} className="text-retro-muted hover:text-retro-text font-medium transition-colors flex items-center gap-2 border-2 border-transparent hover:border-retro-muted px-2 py-1 rounded">
                   <User size={18} />
-                  <span className="hidden sm:inline">{t('nav.profile')}</span>
+                  <span className="hidden sm:inline">{t('nav.profile') || 'PROFILE'}</span>
                 </Link>
                 <Button variant="ghost" onClick={handleUploadClick} className="flex gap-2 items-center">
                   <PlusCircle size={18} />
-                  <span className="hidden sm:inline">{t('nav.upload')}</span>
+                  <span className="hidden xl:inline">{t('nav.upload') || 'UPLOAD'}</span>
                 </Button>
                 <Button variant="secondary" onClick={handleLogout} className="flex gap-2 items-center px-4">
                   <LogOut size={16} />

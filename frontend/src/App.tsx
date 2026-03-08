@@ -9,6 +9,8 @@ import Profile from './pages/Profile';
 import Explore from './pages/Explore';
 import Home from './pages/Home';
 import Settings from './pages/Settings';
+import SetupProfile from './pages/SetupProfile';
+import Wallet from './pages/Wallet';
 import './index.css';
 
 import CourseDetail from './pages/CourseDetail';
@@ -19,6 +21,16 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   if (!isAuthenticated) {
     return <Navigate to="/" replace />;
   }
+  return <>{children}</>;
+};
+
+const RequireUsername = ({ children }: { children: React.ReactNode }) => {
+  const { isAuthenticated, user } = useAuth();
+
+  if (isAuthenticated && user?.username?.startsWith('user_')) {
+    return <Navigate to="/setup-profile" replace />;
+  }
+
   return <>{children}</>;
 };
 
@@ -40,24 +52,36 @@ function App() {
               <Navbar />
               <main className="max-w-7xl mx-auto">
                 <Routes>
-                  <Route path="/" element={<Root />} />
+                  <Route path="/" element={<RequireUsername><Root /></RequireUsername>} />
+                  <Route path="/setup-profile" element={<ProtectedRoute><SetupProfile /></ProtectedRoute>} />
                   <Route path="/course/:id" element={
-                    <ProtectedRoute>
-                      <CourseDetail />
-                    </ProtectedRoute>
+                    <RequireUsername>
+                      <ProtectedRoute>
+                        <CourseDetail />
+                      </ProtectedRoute>
+                    </RequireUsername>
                   } />
                   <Route path="/login" element={<Login />} />
                   <Route path="/register" element={<Register />} />
-                  <Route path="/explore" element={<Explore />} />
-                  <Route path="/upload" element={<Upload />} />
-                  <Route path="/profile" element={<Profile />} />
-                  <Route path="/settings" element={
-                    <ProtectedRoute>
-                      <Settings />
-                    </ProtectedRoute>
+                  <Route path="/explore" element={<RequireUsername><Explore /></RequireUsername>} />
+                  <Route path="/upload" element={<RequireUsername><Upload /></RequireUsername>} />
+                  <Route path="/wallet" element={
+                    <RequireUsername>
+                      <ProtectedRoute>
+                        <Wallet />
+                      </ProtectedRoute>
+                    </RequireUsername>
                   } />
-                  <Route path="/u/:username" element={<Profile isPublic={true} />} />
-                  <Route path="*" element={<NotFound />} />
+                  <Route path="/profile" element={<RequireUsername><Profile /></RequireUsername>} />
+                  <Route path="/settings" element={
+                    <RequireUsername>
+                      <ProtectedRoute>
+                        <Settings />
+                      </ProtectedRoute>
+                    </RequireUsername>
+                  } />
+                  <Route path="/u/:username" element={<RequireUsername><Profile isPublic={true} /></RequireUsername>} />
+                  <Route path="*" element={<RequireUsername><NotFound /></RequireUsername>} />
                 </Routes>
               </main>
             </div>
