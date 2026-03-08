@@ -1,199 +1,89 @@
-# JOTROW 📓
+# JOTROW 📓 — Akıllı Ders Notu Paylaşım Platformu
 
-Web tabanlı ders notu paylaşım platformu. Kullanıcılar ders bazlı notlarını organize eder, görseller yükler ve 4 haneli paylaşım kodu ile notlarını başkalarıyla paylaşır.
-
----
-
-## 🗂 Proje Yapısı
-
-```
-notlar-burada/
-├── backend/              # FastAPI + SQLAlchemy + PostgreSQL
-│   ├── app/
-│   │   ├── api/          # Endpoint router'ları (auth, notes, sharing, settings, deps)
-│   │   ├── core/         # Config + güvenlik (JWT, bcrypt)
-│   │   ├── db/           # SQLAlchemy session + base
-│   │   ├── models.py     # User, Course, Note, NoteImage, Transaction
-│   │   └── services/     # MinIO dosya yükleme/silme servisi
-│   ├── alembic/          # DB migration'ları
-│   ├── alembic.ini
-│   ├── requirements.txt
-│   └── .env              # Lokal ortam değişkenleri
-├── frontend/             # React + Vite + Tailwind CSS
-│   └── src/
-│       ├── pages/        # Login, Register, Dashboard, CourseDetail, Upload, Profile, Settings, Explore, NotFound
-│       ├── components/   # Navbar, Onboarding, Card, Button, Input (ui/ altında)
-│       ├── context/      # AuthContext (JWT), LanguageContext (i18n EN/TR)
-│       └── services/     # API axios instance (baseURL: localhost:8000)
-├── HANDOFF.md            # Geliştirici devir teslim belgesi (son oturumun özeti)
-└── docker-compose.yml    # PostgreSQL + MinIO
-```
+**JOTROW**, öğrencilerin ve akademisyenlerin ders notlarını organize etmelerini, güvenle saklamalarını ve bir ekonomi içerisinde paylaşmalarını sağlayan modern bir web platformudur.
 
 ---
 
-## ✅ Çalışan Fonksiyonlar
+## 📽 Vizyon ve Amaç
+JOTROW, akademik bilginin bir değere dönüştüğü bir ekosistem olmayı amaçlar. Kullanıcılar sadece not tutmakla kalmaz, aynı zamanda kendi uzmanlık alanlarını markalaştırır ve **PAPS** token sistemi ile bu bilgiyi ticarileştirebilirler.
 
-### Backend (API)
-| Endpoint | Method | Açıklama | Durum |
-|----------|--------|----------|-------|
-| `/auth/register` | POST | Kullanıcı kaydı + 4 haneli `share_code` üretimi | ✅ |
-| `/auth/login` | POST | OAuth2 form-data ile JWT token alma | ✅ |
-| `/api/courses` | GET/POST | Kullanıcının klasörlerini listele / oluştur | ✅ |
-| `/api/courses/{id}` | GET/PUT/DELETE | Klasör detay / güncelle / sil | ✅ |
-| `/api/courses/{id}/notes` | GET | Klasörün notlarını listele (presigned URL ile) | ✅ |
-| `/api/notes` | GET | Kullanıcının inbox (klasörsüz) notları | ✅ |
-| `/api/notes` | POST | Not oluştur + multipart dosya yükleme | ✅ |
-| `/api/notes/{id}` | PUT | Not başlık/içerik güncelle | ✅ |
-| `/api/notes/{id}` | DELETE | Notu + MinIO görsellerini sil | ✅ |
-| `/api/notes/{id}/move` | PUT | Notu klasöre taşı veya inbox'a geri al | ✅ |
-| `/u/{username}` | GET | Herkese açık profil kontrolü | ✅ |
-| `/u/{username}/verify` | POST | 4 haneli kod doğrulama + misafir token | ✅ |
-| `/api/settings/me` | GET | Kullanıcı ayarlarını getir | ✅ |
-| `/api/settings/profile` | PUT | Profil bilgileri güncelle | ✅ |
-| `/api/settings/profile/pin` | PUT | 4 haneli PIN kodunu değiştir | ✅ |
-| `/api/settings/privacy` | PUT | Gizlilik ayarları | ✅ |
-| `/api/settings/wallet` | GET | PAPS bakiyesi ve işlem geçmişi | ✅ |
-| `/api/settings/earnings` | GET | Haftalık kazanç/harcama özeti | ✅ |
-| `/api/explore` | GET | Keşfet sayfası kullanıcı listesi | ✅ |
-| `/api/notes/{id}/unlock` | POST | PAPS veya PIN ile not kilidi açma | ✅ |
-
-### Frontend
-| Sayfa/Özellik | Durum |
-|---------------|-------|
-| Login / Register sayfaları | ✅ |
-| Dashboard — klasör & inbox yönetimi | ✅ |
-| **Drag & Drop** — Inbox notlarını klasörlere sürükle-bırak | ✅ |
-| Kurs detay — not listesi & lightbox | ✅ |
-| Not yükleme (Metin + Görsel + HEIC desteği) | ✅ |
-| Profil sayfası `/u/:username` — PIN Korumalı | ✅ |
-| **Tam i18n Desteği** — Tüm sayfalar TR/EN | ✅ |
-| Settings — Profil, Gizlilik, Cüzdan, Kazanç, Hesap | ✅ |
-| Explore — Kullanıcı keşfet & arama | ✅ |
-| PAPS Sistemi — Bakiye & işlem geçmişi | ✅ |
-| **PAPS Unlock** — Kilitli notları PAPS ile satın alma | ✅ |
-| **Görsel Sıkıştırma** — Pillow ile %70+ depolama tasarrufu | ✅ |
+[📄 Detaylı Developer Devir Belgesi (Handoff) İçin Tıklayın](./DEVOLUTION.md)
 
 ---
 
-## ⚠️ Bilinen Hatalar
+## 🚀 Öne Çıkan Özellikler
 
-| # | Öncelik | Sorun | Dosya |
-|---|---------|-------|-------|
-| 1 | 🔴 KRİTİK | Canlı ortamda "Failed to upload note" (Pillow/MinIO senkronizasyonu) | `storage.py` |
-| 2 | 🔴 KRİTİK | DB'de `owner_id = NULL` olan eski notlar yeni kullanıcılara görünüyor | `backend/app/api/notes.py` + DB |
-| 3 | 🔴 KRİTİK | Profil sayfası bazı durumlarda "System Error" veriyor | `pages/Profile.tsx`, `components/Navbar.tsx` |
-| 4 | 🟡 ORTA | Dashboard "Move" butonu çevirilmedi (`dash.move` key eksik) | `pages/Dashboard.tsx:310` |
-| 5 | 🟡 ORTA | `PUT /notes/{id}` endpoint'inde inbox notları için ownership kontrolü yok | `backend/app/api/notes.py:288` |
+### 🛡 Gelişmiş Güvenlik ve Paylaşım
+- **4 Haneli PIN Sistemi:** Her kullanıcıya özel bir paylaşım kodu (`share_code`).
+- **Esnek Görünürlük:** Notlar; Gizli, Herkese Açık (Ücretsiz) veya Kilitli (PAPS/PIN Gerektiren) olarak ayarlanabilir.
+- **Korumalı Profil:** `/u/username` üzerinden kilitli profillere sadece PIN ile erişim.
 
-> Detaylı açıklamalar ve çözüm önerileri için → [HANDOFF.md](./HANDOFF.md)
+### 💰 PAPS Ekonomisi
+- **Kayıt Bonusu:** Her yeni üyeye anında **100 PAPS** hediye.
+- **Not Satışı:** Notlarınızı PAPS karşılığında kilitleyin.
+- **İşlem Geçmişi:** Kazanç ve harcamaların şeffaf takibi.
+
+### 🖼 Akıllı Depolama (Image Engine)
+- **Oto-Sıkıştırma:** Görseller yüklenirken Pillow ile optimize edilir (%82'ye varan depolama tasarrufu).
+- **Format Desteği:** JPEG, PNG ve Apple HEIC/HEIF desteği.
+- **MinIO Entegrasyonu:** Yüksek hızlı S3 uyumlu nesne depolama.
+
+### ⚡ Kullanıcı Deneyimi
+- **Drag & Drop:** Notları klasörlere sürükleyip bırakarak organize edin.
+- **Tam i18n:** Türkçe ve İngilizce dil seçeneği.
+- **Keşfet:** En popüler içerikleri ve yazarları bulun.
 
 ---
 
-## 🚀 Geliştirici Başlangıç Kılavuzu
+## 🛠 Teknik Mimari
 
-### Gereksinimler
-- Docker & Docker Compose
-- Python 3.9+
-- Node.js 18+
+| Katman | Teknoloji |
+|--------|-----------|
+| **Backend** | FastAPI (Python) |
+| **Database** | PostgreSQL + SQLAlchemy |
+| **Görsel İşleme** | Pillow + python-heif |
+| **Frontend** | React 18 + Vite + Tailwind CSS |
+| **Localization** | Custom i18n Context (TR/EN) |
+| **Depolama** | MinIO (Object Storage) |
 
-### 1. Altyapıyı Başlat (PostgreSQL + MinIO)
+---
 
+## 🏁 Hızlı Başlangıç
+
+### 1. Altyapıyı Başlat
 ```bash
-docker-compose up -d db minio
+docker-compose up -d
 ```
 
-### 2. Backend
-
+### 2. Backend Kurulumu
 ```bash
 cd backend
 python -m venv venv
-source venv/bin/activate            # Windows: venv\Scripts\activate
+source venv/bin/activate
 pip install -r requirements.txt
-
-# DB migration çalıştır (ilk kurulumda veya model değişikliğinde)
 alembic upgrade head
-
-# Sunucuyu başlat
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+uvicorn app.main:app --reload
 ```
 
-> **Not:** Backend `backend/.env` dosyasını okur. Varsayılan değerler local docker-compose ile uyumludur. Production'da HTTPS güvenliği için `storage.py` otomatik `secure=True` ayarına geçer.
-
-### 3. Frontend
-
+### 3. Frontend Kurulumu
 ```bash
 cd frontend
 npm install
-npm run dev -- --host 0.0.0.0 --port 5173
+npm run dev
 ```
-
-### Varsayılan Servis Adresleri
-
-| Servis | URL |
-|--------|-----|
-| Frontend | http://localhost:5173 |
-| Backend API | http://localhost:8000 |
-| API Docs (Swagger) | http://localhost:8000/docs |
-| MinIO Console | http://localhost:9001 |
-
-**MinIO yönetim paneli:** kullanıcı: `minioadmin` / şifre: `minioadmin`
 
 ---
 
-## 🔧 Önemli Teknik Notlar
-
-### i18n Çeviri Sistemi
-Tüm UI metinleri `frontend/src/context/LanguageContext.tsx` dosyasından gelir. Key formatı `<sayfa>.<alan>` şeklinde:
-```tsx
-const { t } = useLanguage();
-<p>{t('dash.inbox')}</p>
-```
-Yeni string eklemek için `LanguageContext.tsx`'te hem `en` hem `tr` bloğuna key eklenmeli.
-
-Mevcut prefix'ler: `nav`, `home`, `dash`, `upload`, `exp`, `settings`, `prof`, `login`, `reg`, `cd`, `nf`
-
-### Bcrypt
-`passlib`'in Python 3.9'daki bcrypt backend'i sorunluydu. `app/core/security.py`'de doğrudan `bcrypt` kütüphanesi kullanılıyor. `passlib` bağımlılık listesinde hâlâ var; kaldırılabilir.
-
-### Pydantic v2
-`notes.py` tam uyumlu (`ConfigDict(from_attributes=True)`). `auth.py` ve `sharing.py`'de `class Config: orm_mode = True` uyarısı var ama işlevsel sorun yok.
-
-### MinIO Bucket
-İlk görsel yüklemede `ensure_bucket_exists()` otomatik bucket oluşturur. Manuel kurulum gerekmez.
-
-### JWT Token Yapısı
-- Normal kullanıcı: `sub = "<user_id>"`
-- Misafir token: `sub = "guest:<user_id>"`
-- `deps.py` her iki formatı `get_current_user` içinde handle eder.
+## 🌐 Canlı Ortam Linkleri
+- **Üretim (Live):** [https://jotrow-mu.vercel.app/](https://jotrow-mu.vercel.app/)
+- **API (Render):** [https://jotrow.onrender.com/docs](https://jotrow.onrender.com/docs)
 
 ---
 
-## 🗄 Veritabanı Şeması
-
-```
-users          → id, username, email, hashed_password, share_code, display_name, bio, university, department, note_default_visibility, show_on_explore, paps_balance, created_at
-courses        → id, title, description, owner_id (FK: users), created_at
-notes          → id, title, content, course_id (FK: courses, nullable), owner_id (FK: users, nullable), praise_count, original_author, visibility, created_at
-note_images    → id, note_id (FK: notes), image_url, minio_key
-transactions   → id, user_id (FK: users), type, amount, description, created_at
-```
-
-> ⚠️ **Dikkat:** `notes.owner_id` alanı sonradan eklendi. Eski kayıtlarda `NULL` olabilir → Hata #1. DB temizliği:
-> ```sql
-> DELETE FROM notes WHERE owner_id IS NULL AND course_id IS NULL;
-> ```
+## 📂 Proje Klasör Yapısı
+- `/backend`: FastAPI uygulama kodları, modeller ve migration'lar.
+- `/frontend`: React bileşenleri, sayfalar ve asst'ler.
+- `DEVOLUTION.md`: Yeni geliştiriciler için derinlemesine teknik rehber.
 
 ---
-
-## 📦 Bağımlılıklar
-
-### Backend (`requirements.txt`)
-```
-fastapi, uvicorn, sqlalchemy, psycopg2-binary, alembic,
-pydantic-settings, python-jose[cryptography], bcrypt,
-passlib[bcrypt], python-multipart, minio
-```
-> `passlib` kaldırılabilir; `bcrypt` doğrudan kullanılıyor.
-
-### Frontend (`package.json`)
-React 18, Vite, Tailwind CSS, Axios, React Router v6, Lucide React, date-fns, jwt-decode
+**JOTROW**, bilginin özgürce ama değerinde paylaşıldığı bir gelecek için geliştirildi.
