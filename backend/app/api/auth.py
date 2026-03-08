@@ -54,10 +54,21 @@ def register(
         email=user_in.email,
         hashed_password=security.get_password_hash(user_in.password),
         share_code=None,
+        paps_balance=100,
     )
     db.add(user)
     db.commit()
     db.refresh(user)
+
+    # 100 PAPS registration bonus transaction
+    tx = models.Transaction(
+        user_id=user.id,
+        type="topup",
+        amount=100,
+        description="Ilk Kayit Hediyesi"
+    )
+    db.add(tx)
+    db.commit()
     
     if not user.username:
         user.username = f"user_{user.id}"

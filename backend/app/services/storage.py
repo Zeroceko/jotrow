@@ -34,11 +34,13 @@ def _is_heic(filename: str, content_type: Optional[str]) -> bool:
     return ext in heic_extensions or bool(content_type and content_type.lower() in heic_types)
 
 is_local = settings.MINIO_ENDPOINT.startswith("localhost") or settings.MINIO_ENDPOINT.startswith("127.0.0.1") or settings.MINIO_ENDPOINT.startswith("minio")
+secure_conn = settings.MINIO_SECURE if settings.MINIO_SECURE is not None else not is_local
+
 client = Minio(
     settings.MINIO_ENDPOINT,
     access_key=settings.MINIO_ACCESS_KEY,
     secret_key=settings.MINIO_SECRET_KEY,
-    secure=not is_local,
+    secure=secure_conn,
 )
 
 def ensure_bucket_exists():
