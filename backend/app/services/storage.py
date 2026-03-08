@@ -4,8 +4,9 @@ import uuid
 from datetime import timedelta
 from typing import Optional
 
-from minio import Minio
-from minio.error import S3Error
+import boto3
+from botocore.config import Config as BotoConfig
+from botocore.exceptions import ClientError
 from PIL import Image
 import pillow_heif
 
@@ -14,106 +15,115 @@ from app.core.config import settings
 # Register HEIF/HEIC opener with Pillow
 pillow_heif.register_heif_opener()
 
+# ── S3 Client Setup ──────────────────────────────────────────────────────────
 
-def _convert_heic_to_jpeg(file_data) -> tuple:
-    """Convert HEIC/HEIF file data to JPEG. Returns (bytes_io, new_filename_suffix, content_type)."""
-    img = Image.open(file_data)
-    if img.mode in ("RGBA", "P"):
-        img = img.convert("RGB")
-    buf = io.BytesIO()
-    img.save(buf, format="JPEG", quality=90)
-    buf.seek(0)
-    return buf, ".jpg", "image/jpeg"
+_endpoint = settings.MINIO_ENDPOINT  # e.g., "xxx.supabase.co/storage/v1/s3"
+
+# Build the full endpoint URL
+if _endpoint.startswith("http://") or _endpoint.startswith("https://"):
+    _endpoint_url = _endpoint
+else:
+    is_local = _endpoint.startswith("localhost") or _endpoint.startswith("127.0.0.1") or _endpoint.startswith("minio")
+    scheme = "http" if is_local else "https"
+    _endpoint_url = f"{scheme}://{_endpoint}"
+
+# Override if MINIO_SECURE is explicitly set
+if settings.MINIO_SECURE is not None:
+    if settings.MINIO_SECURE:
+        _endpoint_url = _endpoint_url.replace("http://", "https://")
+    else:
+        _endpoint_url = _endpoint_url.replace("https://", "http://")
 
 
-def _is_heic(filename: str, content_type: Optional[str]) -> bool:
-    """Check if a file is HEIC/HEIF based on extension or content type."""
-    ext = os.path.splitext(filename)[1].lower() if filename else ""
-    heic_extensions = {".heic", ".heif"}
-    heic_types = {"image/heic", "image/heif", "image/heic-sequence", "image/heif-sequence"}
-    return ext in heic_extensions or bool(content_type and content_type.lower() in heic_types)
-
-is_local = settings.MINIO_ENDPOINT.startswith("localhost") or settings.MINIO_ENDPOINT.startswith("127.0.0.1") or settings.MINIO_ENDPOINT.startswith("minio")
-secure_conn = settings.MINIO_SECURE if settings.MINIO_SECURE is not None else not is_local
-
-client = Minio(
-    settings.MINIO_ENDPOINT,
-    access_key=settings.MINIO_ACCESS_KEY,
-    secret_key=settings.MINIO_SECRET_KEY,
-    secure=secure_conn,
+s3_client = boto3.client(
+    "s3",
+    endpoint_url=_endpoint_url,
+    aws_access_key_id=settings.MINIO_ACCESS_KEY,
+    aws_secret_access_key=settings.MINIO_SECRET_KEY,
+    region_name="auto",
+    config=BotoConfig(
+        signature_version="s3v4",
+        s3={"addressing_style": "path"},
+    ),
 )
 
+# Expose for debug endpoint
+secure_conn = _endpoint_url.startswith("https")
+
+
 def ensure_bucket_exists():
-    found = client.bucket_exists(settings.MINIO_BUCKET_NAME)
-    if not found:
-        client.make_bucket(settings.MINIO_BUCKET_NAME)
-        # Set bucket policy to public read for simplistic access, or keep it private and use presigned URLs.
-        # We will use presigned URLs since these notes shouldn't be fully public randomly, but shared via code.
+    try:
+        s3_client.head_bucket(Bucket=settings.MINIO_BUCKET_NAME)
+    except ClientError:
+        try:
+            s3_client.create_bucket(Bucket=settings.MINIO_BUCKET_NAME)
+        except ClientError as e:
+            print(f"Could not create bucket {settings.MINIO_BUCKET_NAME}: {e}")
     return True
+
 
 def upload_file_to_minio(file_data, file_name: str, content_type: str) -> str:
     ensure_bucket_exists()
 
-    # Always process the image through Pillow for compression and format standardization
+    # Process the image through Pillow for compression and format standardization
     try:
-        # If it's HEIC, the pillow_heif opener handles it automatically when Image.open is called
         img = Image.open(file_data)
-        
-        # Convert to RGB if needed
+
         if img.mode in ("RGBA", "P"):
             img = img.convert("RGB")
-            
+
         # Resize if dimensions exceed 1200px (maintain aspect ratio)
         max_size = (1200, 1200)
         img.thumbnail(max_size, Image.Resampling.LANCZOS)
-        
-        # Save to buffer with compression
+
         buf = io.BytesIO()
         img.save(buf, format="JPEG", quality=70)
         buf.seek(0)
-        
-        # Override file details for the compressed chunk
+
         file_data = buf
         content_type = "image/jpeg"
         base_name = os.path.splitext(file_name)[0]
         file_name = base_name + ".jpg"
-        file_length = buf.getbuffer().nbytes
     except Exception as e:
         print(f"Error compressing image {file_name}: {e}")
-        # If Pillow fails (not an image, etc.), fallback to calculating read size
-        file_data.seek(0, os.SEEK_END)
-        file_length = file_data.tell()
-        file_data.seek(0)
-
+        # Not an image or processing failed, upload as-is
+        if hasattr(file_data, 'seek'):
+            file_data.seek(0)
 
     unique_file_name = f"{uuid.uuid4()}_{file_name}"
 
-    client.put_object(
-        settings.MINIO_BUCKET_NAME,
-        unique_file_name,
-        file_data,
-        length=file_length,
-        part_size=10*1024*1024,
-        content_type=content_type,
+    s3_client.put_object(
+        Bucket=settings.MINIO_BUCKET_NAME,
+        Key=unique_file_name,
+        Body=file_data.read() if hasattr(file_data, 'read') else file_data,
+        ContentType=content_type,
     )
     return unique_file_name
 
+
 def get_presigned_url(object_name: str, expires_minutes: int = 60) -> str:
     try:
-         url = client.presigned_get_object(
-            settings.MINIO_BUCKET_NAME,
-            object_name,
-            expires=timedelta(minutes=expires_minutes),
+        url = s3_client.generate_presigned_url(
+            "get_object",
+            Params={
+                "Bucket": settings.MINIO_BUCKET_NAME,
+                "Key": object_name,
+            },
+            ExpiresIn=expires_minutes * 60,
         )
-         return url
+        return url
     except Exception as err:
         print(f"Error getting presigned url: {err}")
         return ""
 
+
 def delete_file_from_minio(object_name: str) -> bool:
     try:
-        client.remove_object(settings.MINIO_BUCKET_NAME, object_name)
+        s3_client.delete_object(
+            Bucket=settings.MINIO_BUCKET_NAME,
+            Key=object_name,
+        )
         return True
     except Exception as err:
-        print(f"Error deleting object from MinIO: {err}")
+        print(f"Error deleting object: {err}")
         return False
