@@ -67,7 +67,7 @@ def search_users(
 
 @router.get("/featured", response_model=List[PublicUserResponse])
 def get_featured_users(
-    limit: int = 10,
+    limit: int = 50,
     db: Session = Depends(deps.get_db)
 ) -> Any:
     """
