@@ -13,3 +13,4 @@ passlib[bcrypt]
 python-dotenv
 pydantic[email]
 pydantic-settings
+requests

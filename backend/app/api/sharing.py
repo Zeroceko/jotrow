@@ -379,3 +379,86 @@ def unlock_note(
     
     db.commit()
     return {"message": "Note unlocked successfully"}
+
+
+@router.get("/notes/{note_id}/download")
+def download_note(
+    note_id: int,
+    db: Session = Depends(deps.get_db),
+    current_user: models.User = Depends(deps.get_current_user),
+) -> Any:
+    """
+    Download a note as a ZIP file containing images + summary text.
+    Only for note owners or users who have unlocked the note.
+    """
+    import io
+    import zipfile
+    import requests
+    from fastapi.responses import StreamingResponse
+
+    note = db.query(models.Note).filter(models.Note.id == note_id).first()
+    if not note:
+        raise HTTPException(status_code=404, detail="Note not found")
+
+    # Check access: owner or unlocked
+    is_owner = note.owner_id == current_user.id
+    has_unlocked = db.query(models.UnlockedNote).filter(
+        models.UnlockedNote.note_id == note_id,
+        models.UnlockedNote.user_id == current_user.id,
+    ).first()
+    is_free = note.paps_price <= 0 and not note.requires_pin
+
+    if not is_owner and not has_unlocked and not is_free:
+        raise HTTPException(status_code=403, detail="You must unlock this note first")
+
+    # Get note owner info
+    owner = db.query(models.User).filter(models.User.id == note.owner_id).first()
+    course = db.query(models.Course).filter(models.Course.id == note.course_id).first() if note.course_id else None
+
+    # Build ZIP in memory
+    zip_buf = io.BytesIO()
+    with zipfile.ZipFile(zip_buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        # Summary text file
+        summary_lines = [
+            f"JOTROW — Not Detayı",
+            f"{'=' * 40}",
+            f"",
+            f"Başlık: {note.title}",
+            f"Yazar: @{owner.username if owner else 'bilinmiyor'}",
+        ]
+        if owner and owner.display_name:
+            summary_lines.append(f"Yazar Adı: {owner.display_name}")
+        if course:
+            summary_lines.append(f"Klasör: {course.title}")
+            if course.description:
+                summary_lines.append(f"Klasör Açıklama: {course.description}")
+        summary_lines.append(f"Oluşturulma: {note.created_at}")
+        summary_lines.append(f"PAPS Fiyat: {note.paps_price}")
+        summary_lines.append(f"")
+        summary_lines.append(f"{'=' * 40}")
+        summary_lines.append(f"Açıklama:")
+        summary_lines.append(f"{'=' * 40}")
+        summary_lines.append(note.content or "(Açıklama yok)")
+
+        zf.writestr("not_bilgisi.txt", "\n".join(summary_lines))
+
+        # Download and add images
+        for i, img in enumerate(note.images):
+            if img.minio_key:
+                try:
+                    url = storage.get_presigned_url(img.minio_key)
+                    if url:
+                        resp = requests.get(url, timeout=15)
+                        if resp.status_code == 200:
+                            ext = img.minio_key.rsplit(".", 1)[-1] if "." in img.minio_key else "jpg"
+                            zf.writestr(f"dosya_{i + 1}.{ext}", resp.content)
+                except Exception as e:
+                    print(f"[DOWNLOAD] Failed to fetch image {img.minio_key}: {e}")
+
+    zip_buf.seek(0)
+    safe_title = "".join(c if c.isalnum() or c in " _-" else "_" for c in note.title)
+    return StreamingResponse(
+        zip_buf,
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{safe_title}.zip"'},
+    )

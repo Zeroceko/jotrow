@@ -6,7 +6,7 @@ import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
 import {
   Lock, Unlock, Loader2, BookOpen, ChevronDown, ChevronUp,
-  X, ChevronLeft, ChevronRight, ZoomIn, Bookmark, Settings
+  X, ChevronLeft, ChevronRight, ZoomIn, Bookmark, Settings, Download
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useAuth } from '../context/AuthContext';
@@ -83,6 +83,7 @@ const Profile: React.FC<ProfileProps> = ({ isPublic = false }) => {
   const [userCourses, setUserCourses] = useState<Course[]>([]);
   const [selectedCourseId, setSelectedCourseId] = useState<number | string>('');
   const [isSaving, setIsSaving] = useState(false);
+  const [downloadingNoteId, setDownloadingNoteId] = useState<number | null>(null);
 
   // Determine if the logged-in user is viewing their own profile
   let loggedInUsername = '';
@@ -251,6 +252,30 @@ const Profile: React.FC<ProfileProps> = ({ isPublic = false }) => {
       alert("Failed to save note.");
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleDownloadNote = async (noteId: number) => {
+    setDownloadingNoteId(noteId);
+    try {
+      const res = await api.get(`/api/sharing/notes/${noteId}/download`, {
+        responseType: 'blob',
+      });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      const disposition = res.headers['content-disposition'];
+      const filename = disposition?.match(/filename="(.+)"/)?.[1] || 'note.zip';
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Download failed', err);
+      alert('İndirme başarısız oldu.');
+    } finally {
+      setDownloadingNoteId(null);
     }
   };
 
@@ -533,12 +558,21 @@ const Profile: React.FC<ProfileProps> = ({ isPublic = false }) => {
                                   </div>
                                   <div className="mt-4 flex justify-end gap-2">
                                     {isAuthenticated && (
-                                      <button
-                                        onClick={(e) => { e.stopPropagation(); openSaveModal(note.id); }}
-                                        className="flex items-center gap-2 text-xs font-bold font-mono px-3 py-1 border-2 border-retro-text text-retro-text hover:bg-retro-text hover:text-retro-bg transition-colors"
-                                      >
-                                        <Bookmark size={14} /> {t('prof.save')}
-                                      </button>
+                                      <>
+                                        <button
+                                          onClick={(e) => { e.stopPropagation(); openSaveModal(note.id); }}
+                                          className="flex items-center gap-2 text-xs font-bold font-mono px-3 py-1 border-2 border-retro-text text-retro-text hover:bg-retro-text hover:text-retro-bg transition-colors"
+                                        >
+                                          <Bookmark size={14} /> {t('prof.save')}
+                                        </button>
+                                        <button
+                                          onClick={(e) => { e.stopPropagation(); handleDownloadNote(note.id); }}
+                                          disabled={downloadingNoteId === note.id}
+                                          className="flex items-center gap-2 text-xs font-bold font-mono px-3 py-1 border-2 border-retro-text text-retro-text hover:bg-retro-text hover:text-retro-bg transition-colors disabled:opacity-50"
+                                        >
+                                          {downloadingNoteId === note.id ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />} İndir
+                                        </button>
+                                      </>
                                     )}
                                     <button
                                       onClick={(e) => { e.stopPropagation(); handlePraise(course.id, note.id); }}
