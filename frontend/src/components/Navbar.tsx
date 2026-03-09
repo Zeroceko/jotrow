@@ -3,11 +3,11 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { LogOut, BookText, PlusCircle, User, Globe, ChevronDown, Wallet } from 'lucide-react';
 import { Button } from './ui/Button';
-import { jwtDecode } from 'jwt-decode';
+
 import { useLanguage } from '../context/LanguageContext';
 
 export const Navbar: React.FC = () => {
-  const { isAuthenticated, logout, token } = useAuth();
+  const { isAuthenticated, logout } = useAuth();
   const { t, language, setLanguage } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
@@ -29,23 +29,13 @@ export const Navbar: React.FC = () => {
     }
   };
 
-  let username = '';
-  if (token) {
-    try {
-      const decoded: any = jwtDecode(token);
-      username = decoded.username || '';
-    } catch {
-      // invalid token
-    }
-  }
-
 
 
   return (
     <nav className="border-b-2 border-retro-border bg-retro-bg/90 backdrop-blur-sm sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16 items-center">
-          <Link to="/" className="flex items-center gap-2 group">
+          <Link to="/explore" className="flex items-center gap-2 group">
             <div className="bg-retro-accent text-retro-bg p-1.5 border-2 border-retro-accent group-hover:bg-retro-bg group-hover:text-retro-accent transition-colors">
               <BookText size={24} />
             </div>
@@ -79,9 +69,9 @@ export const Navbar: React.FC = () => {
                   <Wallet size={18} />
                   <span className="hidden md:inline">{t('set.wallet') || 'WALLET'}</span>
                 </Link>
-                <Link to={`/u/${username}`} className="text-retro-muted hover:text-retro-text font-medium transition-colors flex items-center gap-2 border-2 border-transparent hover:border-retro-muted px-2 py-1 rounded">
+                <Link to="/profile" className="text-retro-muted hover:text-retro-text font-medium transition-colors flex items-center gap-2 border-2 border-transparent hover:border-retro-muted px-2 py-1 rounded">
                   <User size={18} />
-                  <span className="hidden sm:inline">{t('nav.profile') || 'PROFILE'}</span>
+                  <span className="hidden sm:inline">Benim Yerim</span>
                 </Link>
                 <Button variant="ghost" onClick={handleUploadClick} className="flex gap-2 items-center">
                   <PlusCircle size={18} />

@@ -21,6 +21,7 @@ class User(Base):
     # Privacy
     note_default_visibility = Column(String, default="private")  # "private" | "public"
     show_on_explore = Column(Boolean, default=True)
+    is_profile_public = Column(Boolean, default=True)
 
     # Wallet
     paps_balance = Column(Integer, default=0)

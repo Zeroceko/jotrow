@@ -26,6 +26,7 @@ interface UserSettings {
     department: string | null;
     note_default_visibility: string;
     show_on_explore: boolean;
+    is_profile_public: boolean;
     paps_balance: number;
 }
 
@@ -79,6 +80,7 @@ const Settings: React.FC = () => {
     // Privacy form state
     const [defaultVisibility, setDefaultVisibility] = useState<'private' | 'public'>('private');
     const [showOnExplore, setShowOnExplore] = useState(true);
+    const [isProfilePublic, setIsProfilePublic] = useState(true);
     const [privacyMsg, setPrivacyMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
     const [privacyLoading, setPrivacyLoading] = useState(false);
 
@@ -107,6 +109,7 @@ const Settings: React.FC = () => {
                 setPin(data.share_code || '');
                 setDefaultVisibility((data.note_default_visibility as 'private' | 'public') || 'private');
                 setShowOnExplore(data.show_on_explore ?? true);
+                setIsProfilePublic(data.is_profile_public ?? true);
             } catch {
                 // not logged in or error
             } finally {
@@ -152,7 +155,11 @@ const Settings: React.FC = () => {
         setPrivacyLoading(true);
         setPrivacyMsg(null);
         try {
-            await api.put('/api/settings/privacy', { note_default_visibility: defaultVisibility, show_on_explore: showOnExplore });
+            await api.put('/api/settings/privacy', {
+                note_default_visibility: defaultVisibility,
+                show_on_explore: showOnExplore,
+                is_profile_public: isProfilePublic
+            });
             setPrivacyMsg({ text: 'Privacy settings saved.', type: 'success' });
         } catch (err: any) {
             setPrivacyMsg({ text: err.response?.data?.detail || 'Update failed.', type: 'error' });
@@ -378,6 +385,27 @@ const Settings: React.FC = () => {
                                                 }`}
                                         >
                                             <span className={`absolute top-0.5 w-5 h-5 bg-retro-bg transition-all ${showOnExplore ? 'left-7 bg-retro-bg' : 'left-0.5'
+                                                }`} />
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="border-t-2 border-retro-border pt-6">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <label className="text-sm font-bold text-retro-muted tracking-widest uppercase block mb-1">
+                                                Profile & Library Visibility
+                                            </label>
+                                            <p className="text-retro-muted font-mono text-xs">
+                                                If disabled, other users cannot see your school information or note library.
+                                            </p>
+                                        </div>
+                                        <button
+                                            onClick={() => setIsProfilePublic(v => !v)}
+                                            className={`relative w-14 h-7 border-2 transition-all flex-shrink-0 ${isProfilePublic ? 'bg-retro-accent border-retro-accent' : 'bg-retro-bg border-retro-border'
+                                                }`}
+                                        >
+                                            <span className={`absolute top-0.5 w-5 h-5 bg-retro-bg transition-all ${isProfilePublic ? 'left-7 bg-retro-bg' : 'left-0.5'
                                                 }`} />
                                         </button>
                                     </div>

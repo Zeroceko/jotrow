@@ -25,6 +25,7 @@ interface UserProfile {
   university: string | null;
   department: string | null;
   note_count?: number;
+  is_profile_public?: boolean;
 }
 
 interface Course {
@@ -46,7 +47,7 @@ interface Note {
   is_locked: boolean;
 }
 
-const Profile: React.FC<ProfileProps> = ({ isPublic = false }) => {
+const Profile: React.FC<ProfileProps> = () => {
   const { username } = useParams<{ username: string }>();
   const [profile, setProfile] = useState<UserProfile | null>(null);
 
@@ -96,13 +97,14 @@ const Profile: React.FC<ProfileProps> = ({ isPublic = false }) => {
   if (token) {
     try { loggedInUsername = (jwtDecode(token) as any).username || ''; } catch { }
   }
-  const isOwnProfile = isAuthenticated && loggedInUsername === username;
+  const targetUsername = username || loggedInUsername;
+  const isOwnProfile = isAuthenticated && loggedInUsername === targetUsername;
 
   useEffect(() => {
-    if (isPublic && username) {
-      checkProfileExists();
+    if (targetUsername) {
+      checkProfileExists(targetUsername);
     }
-  }, [isPublic, username]);
+  }, [targetUsername]);
 
   const getAuthHeaders = (tokenOverride?: string) => {
     const headers: any = {};
@@ -130,10 +132,10 @@ const Profile: React.FC<ProfileProps> = ({ isPublic = false }) => {
     }
   };
 
-  const checkProfileExists = async () => {
+  const checkProfileExists = async (targetUser: string) => {
     setIsLoading(true);
     try {
-      const res = await api.get(`/api/sharing/${username}`);
+      const res = await api.get(`/api/sharing/${targetUser}`);
       setProfile({
         username: res.data.username,
         display_name: res.data.display_name || null,
@@ -141,16 +143,13 @@ const Profile: React.FC<ProfileProps> = ({ isPublic = false }) => {
         university: res.data.university || null,
         department: res.data.department || null,
         note_count: res.data.note_count || 0,
+        is_profile_public: res.data.is_profile_public ?? true,
       });
-      // Try fetching public courses
+      // Try fetching public courses 
       await fetchPublicCourses(res.data.username);
 
-      // If own profile, fetch purchased notes
-      const isOwner = token && typeof token === 'string' &&
-        (jwtDecode<any>(token).sub === username || !username);
-      if (isOwner || !isPublic) {
-        await fetchPurchasedNotes(res.data.username);
-      }
+      // If own profile, or if profile is public, the backend returns the purchased notes
+      await fetchPurchasedNotes(res.data.username);
     } catch (err: any) {
       setError(err.response?.data?.detail || 'User not found.');
       console.error(err);
@@ -361,11 +360,14 @@ const Profile: React.FC<ProfileProps> = ({ isPublic = false }) => {
 
   // ─────────────────────────────────────────────────────────────────────────
 
-  if (!isPublic) {
+  if (!isOwnProfile && profile?.is_profile_public === false) {
     return (
-      <div className="p-8 text-center font-mono">
-        <h1>{t('prof.private_title')}</h1>
-        <p className="text-retro-muted mt-4">{t('prof.private_desc')}</p>
+      <div className="p-8 text-center font-mono max-w-lg mx-auto min-h-[60vh] flex flex-col items-center justify-center">
+        <Lock size={64} className="text-retro-muted mb-6" />
+        <h1 className="text-3xl uppercase tracking-widest font-bold">Bu profil gizlidir</h1>
+        <p className="text-retro-muted mt-4 text-sm">
+          Bu kullanıcının okul bilgileri ve kütüphanesi gizli tutulmaktadır.
+        </p>
       </div>
     );
   }
@@ -681,58 +683,104 @@ const Profile: React.FC<ProfileProps> = ({ isPublic = false }) => {
             <div className="grid grid-cols-1 gap-6">
               {purchasedNotes.map(note => (
                 <Card key={`purchased-${note.id}`} className="border-2 border-retro-accent shadow-solid-accent overflow-hidden p-6 space-y-6">
-                  {/* Unlocked Note: Full content directly since purchased notes are always unlocked for the given user */}
-                  <div className="flex items-start gap-4 flex-col md:flex-row">
-                    {/* Images */}
-                    {note.images && note.images.length > 0 && (
-                      <div className="flex gap-2 flex-wrap md:w-40 flex-shrink-0">
-                        {note.images.map((img, idx) => (
-                          <div
-                            key={idx}
-                            className="w-16 h-16 bg-retro-bg border-2 border-retro-border overflow-hidden cursor-zoom-in group relative"
-                            onClick={() => openLightbox(note.images, idx)}
-                          >
-                            <img src={img} alt="" className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
-                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 bg-black/30 transition-opacity">
-                              <ZoomIn size={14} className="text-white" />
-                            </div>
+                  {note.is_locked ? (
+                    <div
+                      className="cursor-pointer group"
+                      onClick={() => { setTargetUnlockNote(note); setUnlockModalOpen(true); setUnlockError(''); setShareCode(''); }}
+                    >
+                      <div className="flex items-start gap-4 flex-col md:flex-row">
+                        <div className="md:w-40 flex-shrink-0">
+                          <div className="w-16 h-16 bg-retro-border/30 border-2 border-retro-border flex items-center justify-center">
+                            <Lock size={20} className="text-retro-danger/60" />
                           </div>
-                        ))}
-                      </div>
-                    )}
-                    {/* Content */}
-                    <div className="flex-1 min-w-0 flex flex-col justify-between">
-                      <div>
-                        <div className="flex justify-between items-start gap-4">
-                          <h4 className="font-bold uppercase text-xl mb-1">{note.title}</h4>
-                          <span className="bg-retro-accent/20 text-retro-accent text-xs px-2 py-0.5 border border-retro-accent/50 font-mono">Satın Alınan</span>
                         </div>
-                        <div className="text-retro-muted font-mono text-xs mb-4">
-                          {format(new Date(note.created_at), 'MMM dd, yyyy')} • Not Sahibi: @{(note as any).owner_username || 'Bilinmiyor'}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex justify-between items-start gap-4">
+                            <div className="flex items-center gap-2 mb-1">
+                              <Lock size={14} className="text-retro-danger" />
+                              <h4 className="font-bold uppercase text-base">{note.title}</h4>
+                            </div>
+                            <span className="hidden md:inline-block bg-retro-accent/20 text-retro-accent text-xs px-2 py-0.5 border border-retro-accent/50 font-mono">Satın Alınan</span>
+                          </div>
+                          <div className="text-retro-muted font-mono text-xs mb-2">
+                            {format(new Date(note.created_at), 'MMM dd, yyyy')} • Not Sahibi:
+                            {(note as any).owner_username ? (
+                              <a href={`/u/${(note as any).owner_username}`} onClick={(e) => e.stopPropagation()} className="hover:text-retro-accent underline text-retro-text ml-1">
+                                @{(note as any).owner_username}
+                              </a>
+                            ) : (
+                              <span className="ml-1">Bilinmiyor</span>
+                            )}
+                          </div>
+                          <div className="mt-3 flex items-center gap-2">
+                            <span className="inline-flex items-center gap-1 px-3 py-1 bg-retro-accent/10 border border-retro-accent/30 text-retro-accent font-mono text-xs font-bold group-hover:bg-retro-accent group-hover:text-retro-bg transition-colors">
+                              <Unlock size={12} />
+                              {note.paps_price > 0 ? `${note.paps_price} PAPS ile Aç` : 'PIN ile Aç'}
+                            </span>
+                          </div>
                         </div>
-                        {note.content && (
-                          <p className="text-retro-text font-serif text-sm leading-relaxed whitespace-pre-wrap">
-                            {note.content}
-                          </p>
-                        )}
-                      </div>
-                      <div className="mt-4 flex justify-end gap-2">
-                        <button
-                          onClick={(e) => { e.stopPropagation(); openSaveModal(note.id); }}
-                          className="flex items-center gap-2 text-xs font-bold font-mono px-3 py-1 border-2 border-retro-text text-retro-text hover:bg-retro-text hover:text-retro-bg transition-colors"
-                        >
-                          <Bookmark size={14} /> {t('prof.save')}
-                        </button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleDownloadNote(note.id); }}
-                          disabled={downloadingNoteId === note.id}
-                          className="flex items-center gap-2 text-xs font-bold font-mono px-3 py-1 border-2 border-retro-text text-retro-text hover:bg-retro-text hover:text-retro-bg transition-colors disabled:opacity-50"
-                        >
-                          {downloadingNoteId === note.id ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />} İndir
-                        </button>
                       </div>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="flex items-start gap-4 flex-col md:flex-row">
+                      {/* Images */}
+                      {note.images && note.images.length > 0 && (
+                        <div className="flex gap-2 flex-wrap md:w-40 flex-shrink-0">
+                          {note.images.map((img, idx) => (
+                            <div
+                              key={idx}
+                              className="w-16 h-16 bg-retro-bg border-2 border-retro-border overflow-hidden cursor-zoom-in group relative"
+                              onClick={() => openLightbox(note.images, idx)}
+                            >
+                              <img src={img} alt="" className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
+                              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 bg-black/30 transition-opacity">
+                                <ZoomIn size={14} className="text-white" />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {/* Content */}
+                      <div className="flex-1 min-w-0 flex flex-col justify-between">
+                        <div>
+                          <div className="flex justify-between items-start gap-4">
+                            <h4 className="font-bold uppercase text-xl mb-1">{note.title}</h4>
+                            <span className="bg-retro-accent/20 text-retro-accent text-xs px-2 py-0.5 border border-retro-accent/50 font-mono">Satın Alınan</span>
+                          </div>
+                          <div className="text-retro-muted font-mono text-xs mb-4">
+                            {format(new Date(note.created_at), 'MMM dd, yyyy')} • Not Sahibi:
+                            {(note as any).owner_username ? (
+                              <a href={`/u/${(note as any).owner_username}`} onClick={(e) => e.stopPropagation()} className="hover:text-retro-accent underline text-retro-text ml-1">
+                                @{(note as any).owner_username}
+                              </a>
+                            ) : (
+                              <span className="ml-1">Bilinmiyor</span>
+                            )}
+                          </div>
+                          {note.content && (
+                            <p className="text-retro-text font-serif text-sm leading-relaxed whitespace-pre-wrap">
+                              {note.content}
+                            </p>
+                          )}
+                        </div>
+                        <div className="mt-4 flex justify-end gap-2">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); openSaveModal(note.id); }}
+                            className="flex items-center gap-2 text-xs font-bold font-mono px-3 py-1 border-2 border-retro-text text-retro-text hover:bg-retro-text hover:text-retro-bg transition-colors"
+                          >
+                            <Bookmark size={14} /> {t('prof.save')}
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleDownloadNote(note.id); }}
+                            disabled={downloadingNoteId === note.id}
+                            className="flex items-center gap-2 text-xs font-bold font-mono px-3 py-1 border-2 border-retro-text text-retro-text hover:bg-retro-text hover:text-retro-bg transition-colors disabled:opacity-50"
+                          >
+                            {downloadingNoteId === note.id ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />} İndir
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </Card>
               ))}
             </div>

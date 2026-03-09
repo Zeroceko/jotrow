@@ -26,6 +26,7 @@ class SettingsResponse(BaseModel):
     department: Optional[str]
     note_default_visibility: str
     show_on_explore: bool
+    is_profile_public: bool
     paps_balance: int
 
 
@@ -43,6 +44,7 @@ class PinUpdate(BaseModel):
 class PrivacyUpdate(BaseModel):
     note_default_visibility: Optional[str] = None  # "private" | "public"
     show_on_explore: Optional[bool] = None
+    is_profile_public: Optional[bool] = None
 
 
 class EmailUpdate(BaseModel):
@@ -95,6 +97,7 @@ def get_settings(
         "department": current_user.department,
         "note_default_visibility": current_user.note_default_visibility or "private",
         "show_on_explore": current_user.show_on_explore if current_user.show_on_explore is not None else True,
+        "is_profile_public": current_user.is_profile_public if current_user.is_profile_public is not None else True,
         "paps_balance": current_user.paps_balance or 0,
     }
 
@@ -153,6 +156,8 @@ def update_privacy(
         current_user.note_default_visibility = privacy_in.note_default_visibility
     if privacy_in.show_on_explore is not None:
         current_user.show_on_explore = privacy_in.show_on_explore
+    if privacy_in.is_profile_public is not None:
+        current_user.is_profile_public = privacy_in.is_profile_public
     db.commit()
     db.refresh(current_user)
     return get_settings(current_user)

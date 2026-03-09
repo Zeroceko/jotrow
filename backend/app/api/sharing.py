@@ -92,7 +92,11 @@ def get_featured_users(
     } for u, c in users]
 
 @router.get("/{username}")
-def get_public_profile(username: str, db: Session = Depends(deps.get_db)) -> Any:
+def get_public_profile(
+    username: str, 
+    db: Session = Depends(deps.get_db),
+    current_user: Optional[models.User] = Depends(deps.get_optional_current_user)
+) -> Any:
     """
     Check if a public profile exists and return its public metadata.
     Frontend will use this to show the code entry screen.
@@ -106,14 +110,18 @@ def get_public_profile(username: str, db: Session = Depends(deps.get_db)) -> Any
         .filter(models.Course.owner_id == user.id)\
         .scalar() or 0
 
+    is_owner = current_user and current_user.id == user.id
+    is_public = getattr(user, "is_profile_public", True)
+
     return {
         "username": user.username,
-        "display_name": user.display_name,
-        "bio": user.bio,
-        "university": user.university,
-        "department": user.department,
-        "note_count": note_count,
-        "message": "Enter 4-digit code to access",
+        "display_name": user.display_name if (is_public or is_owner) else None,
+        "bio": user.bio if (is_public or is_owner) else None,
+        "university": user.university if (is_public or is_owner) else None,
+        "department": user.department if (is_public or is_owner) else None,
+        "note_count": note_count if (is_public or is_owner) else 0,
+        "is_profile_public": is_public,
+        "message": "Enter 4-digit code to access" if not is_public and not is_owner else "Public Profile",
     }
 
 @router.post("/{username}/verify", response_model=VerifyResponse)
@@ -219,11 +227,19 @@ def save_note(
     return {"message": "Note saved successfully", "note_id": new_note.id}
 
 @router.get("/{username}/courses")
-def get_public_courses(username: str, db: Session = Depends(deps.get_db)) -> Any:
+def get_public_courses(
+    username: str, 
+    db: Session = Depends(deps.get_db),
+    current_user: Optional[models.User] = Depends(deps.get_optional_current_user)
+) -> Any:
     user = db.query(models.User).filter(models.User.username == username).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
         
+    is_owner = current_user and current_user.id == user.id
+    is_public = getattr(user, "is_profile_public", True)
+    if not is_public and not is_owner:
+        return []
     courses = db.query(
         models.Course,
         func.count(models.Note.id).label('note_count')
@@ -245,13 +261,22 @@ def get_public_courses(username: str, db: Session = Depends(deps.get_db)) -> Any
     return result
 
 @router.get("/{username}/purchases")
-def get_user_purchases(username: str, db: Session = Depends(deps.get_db)) -> Any:
+def get_user_purchases(
+    username: str, 
+    db: Session = Depends(deps.get_db),
+    current_user: Optional[models.User] = Depends(deps.get_optional_current_user)
+) -> Any:
     """
     Get notes that the user has unlocked.
     """
     user = db.query(models.User).filter(models.User.username == username).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+        
+    is_owner = current_user and current_user.id == user.id
+    is_public = getattr(user, "is_profile_public", True)
+    if not is_public and not is_owner:
+        return []
         
     unlocked = db.query(models.UnlockedNote).filter(models.UnlockedNote.user_id == user.id).all()
     if not unlocked:
@@ -260,18 +285,44 @@ def get_user_purchases(username: str, db: Session = Depends(deps.get_db)) -> Any
     note_ids = [u.note_id for u in unlocked]
     notes = db.query(models.Note).filter(models.Note.id.in_(note_ids)).all()
     
+    # When viewing own profile, all purchased notes are accessible
+    # When viewing someone else's profile, check if the viewer also unlocked each note
+    viewer_unlocked_ids = set()
+    if current_user and not is_owner:
+        viewer_unlocked = db.query(models.UnlockedNote.note_id).filter(
+            models.UnlockedNote.user_id == current_user.id
+        ).all()
+        viewer_unlocked_ids = {u[0] for u in viewer_unlocked}
+
     result = []
     for n in notes:
         owner = db.query(models.User).filter(models.User.id == n.owner_id).first()
+        
+        # Owner always has full access to their own purchased list
+        # Viewer has access if they also unlocked the note, or they own the note
+        is_note_owner = current_user and current_user.id == n.owner_id
+        has_access = is_owner or is_note_owner or (n.id in viewer_unlocked_ids)
+            
+        # Generate presigned URLs for images
+        image_urls = []
+        if has_access:
+            image_urls = [
+                storage.get_presigned_url(img.minio_key)
+                for img in n.images
+                if img.minio_key
+            ]
+            
         nt_dict = {
             "id": n.id,
             "title": n.title,
-            "content": n.content,
+            "content": n.content if has_access else None,
             "paps_price": n.paps_price,
             "requires_pin": n.requires_pin,
             "created_at": n.created_at,
             "owner_username": owner.username if owner else "unknown",
-            "images": [{"id": img.id, "minio_key": img.minio_key} for img in n.images]
+            "images": image_urls,
+            "is_locked": not has_access,
+            "praise_count": n.praise_count or 0
         }
         result.append(nt_dict)
     
