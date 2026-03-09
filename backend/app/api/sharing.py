@@ -38,7 +38,7 @@ class VerifyResponse(BaseModel):
 @router.get("/search", response_model=List[PublicUserResponse])
 def search_users(
     q: str = Query("", min_length=1),
-    limit: int = 20,
+    limit: int = 50,
     db: Session = Depends(deps.get_db)
 ) -> Any:
     """
