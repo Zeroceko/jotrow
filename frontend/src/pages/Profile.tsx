@@ -28,6 +28,7 @@ interface UserProfile {
   department: string | null;
   note_count?: number;
   is_profile_public?: boolean;
+  total_praise?: number;
 }
 
 interface Course {
@@ -171,6 +172,7 @@ const Profile: React.FC<ProfileProps> = () => {
         department: res.data.department || null,
         note_count: res.data.note_count || 0,
         is_profile_public: res.data.is_profile_public ?? true,
+        total_praise: res.data.total_praise || 0,
       });
 
       // Determine ownership after setting profile
@@ -351,6 +353,8 @@ const Profile: React.FC<ProfileProps> = () => {
         );
         return { ...prev, [courseId]: updatedNotes };
       });
+      setProfile(prev => prev ? { ...prev, total_praise: (prev.total_praise || 0) + 1 } : prev);
+
     } catch (error) {
       console.error("Failed to praise note", error);
     }
@@ -565,7 +569,7 @@ const Profile: React.FC<ProfileProps> = () => {
             <div>
               <div className="text-[10px] text-retro-muted uppercase font-bold tracking-tighter opacity-70">{t('dash.total_praise')}</div>
               <div className="text-2xl font-bold font-mono tracking-tighter">
-                {purchasedNotes.length} {isOwnProfile ? 'Satın Alınan' : 'PTS'}
+                {profile.total_praise || 0}_
               </div>
             </div>
           </div>
@@ -779,8 +783,8 @@ const Profile: React.FC<ProfileProps> = () => {
                         }
                       }}
                       className={`group hover:-translate-y-2 transition-all duration-300 relative flex flex-col h-full border-2 shadow-solid hover:shadow-solid-accent cursor-pointer ${dragOverCourseId === course.id
-                          ? 'border-retro-accent bg-retro-accent/10 scale-105'
-                          : 'border-retro-border hover:border-retro-accent'
+                        ? 'border-retro-accent bg-retro-accent/10 scale-105'
+                        : 'border-retro-border hover:border-retro-accent'
                         }`}
                     >
                       {editingId === course.id ? (

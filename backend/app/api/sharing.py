@@ -113,6 +113,10 @@ def get_public_profile(
     is_owner = current_user and current_user.id == user.id
     is_public = getattr(user, "is_profile_public", True)
 
+    total_praise = db.query(func.sum(models.Note.praise_count)).filter(
+        models.Note.owner_id == user.id
+    ).scalar() or 0
+
     return {
         "username": user.username,
         "display_name": user.display_name if (is_public or is_owner) else None,
@@ -121,6 +125,7 @@ def get_public_profile(
         "department": user.department if (is_public or is_owner) else None,
         "note_count": note_count if (is_public or is_owner) else 0,
         "is_profile_public": is_public,
+        "total_praise": total_praise if (is_public or is_owner) else 0,
         "message": "Enter 4-digit code to access" if not is_public and not is_owner else "Public Profile",
     }
 

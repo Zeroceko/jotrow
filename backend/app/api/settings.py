@@ -23,11 +23,9 @@ class SettingsResponse(BaseModel):
     display_name: Optional[str]
     bio: Optional[str]
     university: Optional[str]
-    department: Optional[str]
-    note_default_visibility: str
-    show_on_explore: bool
     is_profile_public: bool
     paps_balance: int
+    total_praise: int
 
 
 class ProfileUpdate(BaseModel):
@@ -92,9 +90,14 @@ class EarningsResponse(BaseModel):
 
 @router.get("/me", response_model=SettingsResponse)
 def get_settings(
+    db: Session = Depends(deps.get_db),
     current_user: models.User = Depends(deps.get_current_user),
 ) -> Any:
     """Get full settings for the current user."""
+    total_praise = db.query(func.sum(models.Note.praise_count)).filter(
+        models.Note.owner_id == current_user.id
+    ).scalar() or 0
+
     return {
         "id": current_user.id,
         "username": current_user.username,
@@ -108,6 +111,7 @@ def get_settings(
         "show_on_explore": current_user.show_on_explore if current_user.show_on_explore is not None else True,
         "is_profile_public": current_user.is_profile_public if current_user.is_profile_public is not None else True,
         "paps_balance": current_user.paps_balance or 0,
+        "total_praise": total_praise,
     }
 
 
@@ -128,7 +132,7 @@ def update_profile(
         current_user.department = profile_in.department
     db.commit()
     db.refresh(current_user)
-    return get_settings(current_user)
+    return get_settings(db, current_user)
 
 
 @router.put("/profile/pin")
@@ -169,7 +173,7 @@ def update_privacy(
         current_user.is_profile_public = privacy_in.is_profile_public
     db.commit()
     db.refresh(current_user)
-    return get_settings(current_user)
+    return get_settings(db, current_user)
 
 
 @router.put("/account/email")
