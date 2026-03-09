@@ -95,6 +95,7 @@ def read_library_notes(
 ) -> Any:
     notes = db.query(models.Note).filter(
         models.Note.owner_id == current_user.id,
+        models.Note.owner_id.is_not(None),
         models.Note.course_id == None,
         models.Note.original_author == None,  # exclude saved notes from others
     ).join(models.NoteImage, models.Note.id == models.NoteImage.note_id, isouter=True).all()

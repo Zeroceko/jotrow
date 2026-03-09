@@ -3,7 +3,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { Navbar } from './components/Navbar';
 import Login from './pages/Login';
 import Register from './pages/Register';
-import Dashboard from './pages/Dashboard';
+
 import Upload from './pages/Upload';
 import Profile from './pages/Profile';
 import Explore from './pages/Explore';
@@ -36,7 +36,7 @@ const RequireUsername = ({ children }: { children: React.ReactNode }) => {
 
 const Root = () => {
   const { isAuthenticated } = useAuth();
-  return isAuthenticated ? <Dashboard /> : <Home />;
+  return isAuthenticated ? <Navigate to="/profile" replace /> : <Home />;
 };
 
 import { ErrorBoundary } from './components/ErrorBoundary';
