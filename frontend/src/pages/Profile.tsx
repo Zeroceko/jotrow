@@ -147,7 +147,7 @@ const Profile: React.FC<ProfileProps> = ({ isPublic = false }) => {
 
       // If own profile, fetch purchased notes
       const isOwner = token && typeof token === 'string' &&
-        (jwtDecode<any>(token).sub === username || username === '');
+        (jwtDecode<any>(token).sub === username || !username);
       if (isOwner || !isPublic) {
         await fetchPurchasedNotes();
       }
