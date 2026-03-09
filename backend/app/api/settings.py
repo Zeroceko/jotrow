@@ -71,6 +71,15 @@ class WalletResponse(BaseModel):
     transactions: List[TransactionResponse]
 
 
+class TopupRequest(BaseModel):
+    amount: int
+
+
+class WithdrawRequest(BaseModel):
+    amount: int
+    iban: str
+
+
 class EarningsResponse(BaseModel):
     earned: int
     spent: int
@@ -215,6 +224,61 @@ def get_wallet(
         "balance": current_user.paps_balance or 0,
         "transactions": transactions,
     }
+
+
+@router.post("/wallet/topup")
+def topup_wallet(
+    req: TopupRequest,
+    db: Session = Depends(deps.get_db),
+    current_user: models.User = Depends(deps.get_current_user),
+) -> Any:
+    """Simulate purchasing a PAPS package (250, 500, or 1000)."""
+    if req.amount not in (250, 500, 1000):
+        raise HTTPException(status_code=400, detail="Invalid package amount. Must be 250, 500, or 1000.")
+    
+    current_user.paps_balance = (current_user.paps_balance or 0) + req.amount
+    
+    transaction = models.Transaction(
+        user_id=current_user.id,
+        type="topup",
+        amount=req.amount,
+        description=f"Purchased {req.amount} PAPS package"
+    )
+    db.add(transaction)
+    db.commit()
+    
+    return {"message": f"Successfully purchased {req.amount} PAPS.", "balance": current_user.paps_balance}
+
+
+@router.post("/wallet/withdraw")
+def withdraw_wallet(
+    req: WithdrawRequest,
+    db: Session = Depends(deps.get_db),
+    current_user: models.User = Depends(deps.get_current_user),
+) -> Any:
+    """Withdraw PAPS to an IBAN. Minimum 100 PAPS."""
+    if req.amount < 100:
+        raise HTTPException(status_code=400, detail="Minimum withdrawal amount is 100 PAPS.")
+        
+    if not req.iban or len(req.iban.strip()) < 15:
+        raise HTTPException(status_code=400, detail="Please provide a valid IBAN.")
+        
+    current_balance = current_user.paps_balance or 0
+    if current_balance < req.amount:
+        raise HTTPException(status_code=400, detail="Insufficient PAPS balance.")
+        
+    current_user.paps_balance = current_balance - req.amount
+    
+    transaction = models.Transaction(
+        user_id=current_user.id,
+        type="withdraw",
+        amount=-req.amount,
+        description=f"Withdrawal to {req.iban[-4:]}"
+    )
+    db.add(transaction)
+    db.commit()
+    
+    return {"message": f"Successfully requested withdrawal of {req.amount} PAPS.", "balance": current_user.paps_balance}
 
 
 @router.get("/earnings", response_model=EarningsResponse)
