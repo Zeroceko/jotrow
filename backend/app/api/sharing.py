@@ -314,14 +314,20 @@ def get_public_notes(
         if current_user and current_user.id == user.id and not hasattr(current_user, "guest_share_code"):
             is_locked = False
             
-        # Did the requester unlock it via PAPS?
-        if current_user and is_locked and not hasattr(current_user, "guest_share_code"):
-            has_unlocked = db.query(models.UnlockedNote).filter(
-                models.UnlockedNote.note_id == note.id,
-                models.UnlockedNote.user_id == current_user.id
-            ).first()
-            if has_unlocked:
-                is_locked = False
+        # Did the requester unlock it via PAPS or PIN previously?
+        if current_user and is_locked:
+            try:
+                # If current_user is a real User, it has 'id'. If it's a guest dict/model it might not.
+                user_id = getattr(current_user, 'id', None)
+                if user_id:
+                    has_unlocked = db.query(models.UnlockedNote).filter(
+                        models.UnlockedNote.note_id == note.id,
+                        models.UnlockedNote.user_id == user_id
+                    ).first()
+                    if has_unlocked:
+                        is_locked = False
+            except Exception:
+                pass
                 
         # Did the requester provide the profile PIN? (Guest token or just by PIN endpoint previously)
         if current_user and hasattr(current_user, "guest_share_code") and note.requires_pin:
