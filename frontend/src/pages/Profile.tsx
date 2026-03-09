@@ -112,18 +112,18 @@ const Profile: React.FC<ProfileProps> = ({ isPublic = false }) => {
     return headers;
   };
 
-  const fetchPublicCourses = async (tokenOverride?: string) => {
+  const fetchPublicCourses = async (targetUser: string, tokenOverride?: string) => {
     try {
-      const res = await api.get(`/api/sharing/${username}/courses`, { headers: getAuthHeaders(tokenOverride) });
+      const res = await api.get(`/api/sharing/${targetUser}/courses`, { headers: getAuthHeaders(tokenOverride) });
       setCourses(res.data);
     } catch {
       setError('Failed to fetch public courses.');
     }
   };
 
-  const fetchPurchasedNotes = async (tokenOverride?: string) => {
+  const fetchPurchasedNotes = async (targetUser: string, tokenOverride?: string) => {
     try {
-      const res = await api.get(`/api/sharing/${username}/purchases`, { headers: getAuthHeaders(tokenOverride) });
+      const res = await api.get(`/api/sharing/${targetUser}/purchases`, { headers: getAuthHeaders(tokenOverride) });
       setPurchasedNotes(res.data);
     } catch {
       console.error('Failed to fetch purchased notes.');
@@ -143,13 +143,13 @@ const Profile: React.FC<ProfileProps> = ({ isPublic = false }) => {
         note_count: res.data.note_count || 0,
       });
       // Try fetching public courses
-      await fetchPublicCourses();
+      await fetchPublicCourses(res.data.username);
 
       // If own profile, fetch purchased notes
       const isOwner = token && typeof token === 'string' &&
         (jwtDecode<any>(token).sub === username || !username);
       if (isOwner || !isPublic) {
-        await fetchPurchasedNotes();
+        await fetchPurchasedNotes(res.data.username);
       }
     } catch (err: any) {
       setError(err.response?.data?.detail || 'User not found.');
@@ -170,6 +170,9 @@ const Profile: React.FC<ProfileProps> = ({ isPublic = false }) => {
       // Reload the notes of the currently expanded course to un-mask them
       if (expandedCourseId) {
         await reloadCourseNotes(expandedCourseId, newToken);
+      }
+      if (isOwnProfile && profile?.username) {
+        await fetchPurchasedNotes(profile.username, newToken);
       }
       setUnlockModalOpen(false);
       setTargetUnlockNote(null);
@@ -193,8 +196,8 @@ const Profile: React.FC<ProfileProps> = ({ isPublic = false }) => {
       if (expandedCourseId) {
         await reloadCourseNotes(expandedCourseId);
       }
-      if (isOwnProfile) {
-        await fetchPurchasedNotes();
+      if (isOwnProfile && profile?.username) {
+        await fetchPurchasedNotes(profile.username);
       }
       setUnlockModalOpen(false);
       setTargetUnlockNote(null);
