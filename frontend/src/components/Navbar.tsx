@@ -1,10 +1,10 @@
 import React from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LogOut, BookText, PlusCircle, User, Globe, ChevronDown, Wallet } from 'lucide-react';
+import { LogOut, PlusCircle, User, Globe, ChevronDown, Wallet } from 'lucide-react';
 import { Button } from './ui/Button';
-
 import { useLanguage } from '../context/LanguageContext';
+import Logo from './Logo';
 
 export const Navbar: React.FC = () => {
   const { isAuthenticated, logout } = useAuth();
@@ -29,16 +29,12 @@ export const Navbar: React.FC = () => {
     }
   };
 
-
-
   return (
     <nav className="border-b-2 border-retro-border bg-retro-bg/90 backdrop-blur-sm sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16 items-center">
           <Link to="/explore" className="flex items-center gap-2 group">
-            <div className="bg-retro-accent text-retro-bg p-1.5 border-2 border-retro-accent group-hover:bg-retro-bg group-hover:text-retro-accent transition-colors">
-              <BookText size={24} />
-            </div>
+            <Logo size={32} className="group-hover:rotate-12 transition-transform duration-300" />
             <span className="font-bold text-xl tracking-tight uppercase">
               JOTROW
             </span>
