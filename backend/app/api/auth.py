@@ -113,8 +113,18 @@ def login_access_token(
         "user_id": user.id,
         "email": user.email or "",
     }
+from pydantic import BaseModel, ConfigDict, field_validator
+import re
+
 class UserUpdate(BaseModel):
     username: str
+
+    @field_validator('username')
+    @classmethod
+    def validate_username(cls, v: str) -> str:
+        if not re.match(r"^[a-zA-Z0-9_]+$", v):
+            raise ValueError("Username can only contain English letters, numbers, and underscores.")
+        return v
 
 @router.get("/me", response_model=UserResponse)
 def read_user_me(

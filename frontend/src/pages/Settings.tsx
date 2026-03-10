@@ -30,14 +30,6 @@ interface UserSettings {
     paps_balance: number;
 }
 
-interface Transaction {
-    id: number;
-    type: string;
-    amount: number;
-    description: string | null;
-    created_at: string;
-}
-
 
 
 // ── Helper components ───────────────────────────────────────────────────────
@@ -69,15 +61,6 @@ const Settings: React.FC = () => {
     const [activeTab, setActiveTab] = useState<Tab>('profile');
     const [settings, setSettings] = useState<UserSettings | null>(null);
     const [isLoading, setIsLoading] = useState(true);
-
-    // Wallet State
-    const [transactions, setTransactions] = useState<Transaction[]>([]);
-    const [iban, setIban] = useState('');
-    const [withdrawAmount, setWithdrawAmount] = useState('');
-    const [walletMsg, setWalletMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
-    const [walletLoading, setWalletLoading] = useState(false);
-
-
 
     // Profile form state
     const [displayName, setDisplayName] = useState('');
@@ -132,17 +115,7 @@ const Settings: React.FC = () => {
             }
         };
 
-        const fetchWallet = async () => {
-            try {
-                const res = await api.get('/api/settings/wallet');
-                setTransactions(res.data.transactions);
-            } catch {
-                // error
-            }
-        };
-
         fetchSettings();
-        fetchWallet();
     }, []);
 
 
@@ -231,40 +204,6 @@ const Settings: React.FC = () => {
         }
     };
 
-    const handleTopup = async (amount: number) => {
-        setWalletLoading(true);
-        setWalletMsg(null);
-        try {
-            const res = await api.post('/api/settings/wallet/topup', { amount });
-            setSettings(prev => prev ? { ...prev, paps_balance: res.data.balance } : prev);
-            setWalletMsg({ text: res.data.message, type: 'success' });
-            const txRes = await api.get('/api/settings/wallet');
-            setTransactions(txRes.data.transactions);
-        } catch (err: any) {
-            setWalletMsg({ text: err.response?.data?.detail || 'Topup failed.', type: 'error' });
-        } finally {
-            setWalletLoading(false);
-        }
-    };
-
-    const handleWithdraw = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setWalletLoading(true);
-        setWalletMsg(null);
-        try {
-            const res = await api.post('/api/settings/wallet/withdraw', { amount: parseInt(withdrawAmount), iban });
-            setSettings(prev => prev ? { ...prev, paps_balance: res.data.balance } : prev);
-            setWalletMsg({ text: res.data.message, type: 'success' });
-            setIban('');
-            setWithdrawAmount('');
-            const txRes = await api.get('/api/settings/wallet');
-            setTransactions(txRes.data.transactions);
-        } catch (err: any) {
-            setWalletMsg({ text: err.response?.data?.detail || 'Withdrawal failed.', type: 'error' });
-        } finally {
-            setWalletLoading(false);
-        }
-    };
 
     const handleLogout = () => {
         logout();
@@ -274,7 +213,6 @@ const Settings: React.FC = () => {
     const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
         { id: 'profile', label: t('set.profile'), icon: <User size={16} /> },
         { id: 'privacy', label: t('set.privacy'), icon: <ShieldCheck size={16} /> },
-        { id: 'wallet', label: t('set.wallet'), icon: <span className="font-bold">P</span> },
         { id: 'account', label: t('set.account'), icon: <Settings2 size={16} /> },
     ];
 
@@ -480,103 +418,6 @@ const Settings: React.FC = () => {
                             </div>
                         </Card>
                     )}
-
-                    {/* ── Wallet Tab ── */}
-                    {activeTab === 'wallet' && (
-                        <div className="space-y-6">
-                            {walletMsg && <StatusMessage msg={walletMsg.text} type={walletMsg.type} />}
-
-                            <div className="bg-retro-accent text-retro-bg p-6 border-4 border-retro-border flex flex-col md:flex-row justify-between items-center gap-4">
-                                <div className="text-center md:text-left">
-                                    <h3 className="text-sm font-bold uppercase tracking-widest opacity-80 mb-1">{t('set.available')}</h3>
-                                    <div className="text-5xl font-bold font-mono tracking-tighter">
-                                        {settings?.paps_balance || 0} <span className="text-2xl opacity-60">PAPS</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {/* Buy PAPS */}
-                                <Card>
-                                    <SectionTitle>{t('set.buy_paps')}</SectionTitle>
-                                    <div className="space-y-4">
-                                        {[
-                                            { amount: 250, label: t('set.buy_250'), price: t('set.price_250'), desc: t('set.buy_250_desc') },
-                                            { amount: 500, label: t('set.buy_500'), price: t('set.price_500'), desc: t('set.buy_500_desc') },
-                                            { amount: 1000, label: t('set.buy_1000'), price: t('set.price_1000'), desc: t('set.buy_1000_desc') },
-                                        ].map((pkg) => (
-                                            <button
-                                                key={pkg.amount}
-                                                onClick={() => handleTopup(pkg.amount)}
-                                                disabled={walletLoading}
-                                                className="w-full text-left p-4 border-2 border-retro-border hover:border-retro-accent hover:bg-retro-panel transition-all group flex justify-between items-center"
-                                            >
-                                                <div>
-                                                    <div className="font-bold text-lg">{pkg.label}</div>
-                                                    <div className="text-xs font-mono text-retro-muted mt-1">{pkg.desc}</div>
-                                                </div>
-                                                <div className="bg-retro-accent text-retro-bg px-3 py-1 font-bold text-sm tracking-widest">{pkg.price}</div>
-                                            </button>
-                                        ))}
-                                    </div>
-                                </Card>
-
-                                {/* Withdraw */}
-                                <Card>
-                                    <SectionTitle>{t('set.withdraw')}</SectionTitle>
-                                    <p className="text-xs font-mono text-retro-muted mb-4">{t('set.withdraw_desc')}</p>
-                                    <form onSubmit={handleWithdraw} className="space-y-4">
-                                        <Input
-                                            label={t('set.iban')}
-                                            value={iban}
-                                            onChange={(e) => setIban(e.target.value.toUpperCase())}
-                                            placeholder={t('set.iban_placeholder')}
-                                            required
-                                        />
-                                        <Input
-                                            label={t('set.amount_to_withdraw')}
-                                            type="number"
-                                            value={withdrawAmount}
-                                            onChange={(e) => setWithdrawAmount(e.target.value)}
-                                            placeholder="100"
-                                            min="100"
-                                            max={settings?.paps_balance || 0}
-                                            required
-                                        />
-                                        <Button type="submit" disabled={walletLoading || !withdrawAmount || parseInt(withdrawAmount) < 100 || parseInt(withdrawAmount) > (settings?.paps_balance || 0)} className="w-full">
-                                            {t('set.withdraw_btn')}
-                                        </Button>
-                                        <p className="text-xs text-retro-danger font-mono text-center">{t('set.withdraw_min')}</p>
-                                    </form>
-                                </Card>
-                            </div>
-
-                            {/* Transaction History */}
-                            <Card className="mt-6">
-                                <SectionTitle>{t('set.tx_history')}</SectionTitle>
-                                {transactions.length === 0 ? (
-                                    <div className="text-center text-retro-muted font-mono py-8">{t('set.no_tx')}</div>
-                                ) : (
-                                    <div className="space-y-2 max-h-96 overflow-y-auto">
-                                        {transactions.map(tx => (
-                                            <div key={tx.id} className="flex justify-between items-center p-3 border-b-2 border-retro-border/50 last:border-0 hover:bg-retro-panel transition-colors">
-                                                <div>
-                                                    <div className="font-bold capitalize">{tx.type}</div>
-                                                    <div className="text-xs text-retro-muted font-mono">{new Date(tx.created_at).toLocaleString()}</div>
-                                                    {tx.description && <div className="text-xs mt-1 text-retro-text">{tx.description}</div>}
-                                                </div>
-                                                <div className={`font-bold font-mono ${tx.amount > 0 ? 'text-retro-accent' : (tx.amount < 0 ? 'text-retro-danger' : 'text-retro-text')}`}>
-                                                    {tx.amount > 0 ? '+' : ''}{tx.amount} PAPS
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </Card>
-                        </div>
-                    )}
-
-
 
                     {/* ── Account Tab ── */}
                     {activeTab === 'account' && (

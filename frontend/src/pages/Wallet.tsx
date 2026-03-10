@@ -139,6 +139,62 @@ const Wallet: React.FC = () => {
                 </Card>
             </div>
 
+            <div className="relative mb-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 opacity-40 pointer-events-none select-none filter grayscale">
+                    {/* Buy PAPS */}
+                    <Card>
+                        <SectionTitle>{t('set.buy_paps') || 'PAPS SATIN AL'}</SectionTitle>
+                        <div className="space-y-4">
+                            {[
+                                { amount: 250, label: t('set.buy_250') || '250 PAPS', price: t('set.price_250') || '250 TL', desc: t('set.buy_250_desc') || 'Birkaç not kilidini açmak için ideal.' },
+                                { amount: 500, label: t('set.buy_500') || '500 PAPS', price: t('set.price_500') || '500 TL', desc: t('set.buy_500_desc') || 'Düzenli öğrenenler için en popüler.' },
+                                { amount: 1000, label: t('set.buy_1000') || '1000 PAPS', price: t('set.price_1000') || '1000 TL', desc: t('set.buy_1000_desc') || 'Yoğun araştırmacılar için.' },
+                            ].map((pkg) => (
+                                <button
+                                    key={pkg.amount}
+                                    disabled={true}
+                                    className="w-full text-left p-4 border-2 border-retro-border transition-all group flex justify-between items-center"
+                                >
+                                    <div>
+                                        <div className="font-bold text-lg">{pkg.label}</div>
+                                        <div className="text-xs font-mono text-retro-muted mt-1">{pkg.desc}</div>
+                                    </div>
+                                    <div className="bg-retro-accent text-retro-bg px-3 py-1 font-bold text-sm tracking-widest">{pkg.price}</div>
+                                </button>
+                            ))}
+                        </div>
+                    </Card>
+
+                    {/* Withdraw */}
+                    <Card>
+                        <SectionTitle>{t('set.withdraw') || 'PARA ÇEK'}</SectionTitle>
+                        <p className="text-xs font-mono text-retro-muted mb-4">{t('set.withdraw_desc') || 'PAPS bakiyenizi banka hesabınıza çekin. 1 PAPS = 1 TL.'}</p>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="text-sm font-bold text-retro-muted tracking-widest uppercase block mb-2">{t('set.iban') || 'IBAN'}</label>
+                                <div className="p-3 border-2 border-retro-border bg-retro-bg/50 text-retro-muted font-mono h-11"></div>
+                            </div>
+                            <div>
+                                <label className="text-sm font-bold text-retro-muted tracking-widest uppercase block mb-2">{t('set.amount_to_withdraw') || 'MİKTAR (PAPS)'}</label>
+                                <div className="p-3 border-2 border-retro-border bg-retro-bg/50 text-retro-muted font-mono h-11"></div>
+                            </div>
+                            <button disabled className="w-full py-3 bg-retro-accent text-retro-bg font-bold font-mono tracking-widest uppercase">
+                                {t('set.withdraw_btn') || 'PARA ÇEK_'}
+                            </button>
+                            <p className="text-xs text-retro-danger font-mono text-center">{t('set.withdraw_min') || 'Minimum çekim tutarı 100 PAPS.'}</p>
+                        </div>
+                    </Card>
+                </div>
+
+                <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
+                    <div className="bg-retro-bg border-4 border-retro-accent text-retro-accent px-8 py-3 transform -rotate-6 shadow-[8px_8px_0px_0px_#2dd4bf]">
+                        <h2 className="text-3xl font-bold font-mono tracking-widest uppercase">
+                            YAKINDA...
+                        </h2>
+                    </div>
+                </div>
+            </div>
+
             <Card>
                 <SectionTitle>{t('set.tx_history') || 'Transaction History'}</SectionTitle>
                 {!walletData ? (

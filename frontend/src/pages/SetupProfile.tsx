@@ -82,7 +82,7 @@ const SetupProfile: React.FC = () => {
                             label={t('reg.user_label') || 'Username'}
                             type="text"
                             value={username}
-                            onChange={(e) => setUsername(e.target.value)}
+                            onChange={(e) => setUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g, ''))}
                             required
                             autoComplete="off"
                             spellCheck="false"

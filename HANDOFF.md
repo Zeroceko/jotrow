@@ -68,9 +68,21 @@ Dashboard'da gelen kutusundaki (Inbox) notlar, klasörlerin üzerine sürükle-b
 
 ---
 
+### 5. Anasayfa PAPS Bilgilendirmesi eklendi
+Anasayfada yer alan "PIN Korumalı" kısmı, yeni sistemle uyumlu olarak "PIN veya PAPS ile Korumalı" şeklinde değiştirildi ve çok dilli desteğe eklendi.
+
+### 6. [BUG FIX] Kütüphane "owner_id = NULL" Hatası
+Kütüphane dizininde, sahibinden bağımsız (owner_id = NULL) serbest kalan eski notların başkalarının ekranlarında (inbox) görünmesi engellendi. API'ye `models.Note.owner_id.is_not(None)` garantisi eklendi.
+
+### 7. Veritabanı Temizliği ve Demo Veri (Seeding)
+Veritabanındaki çöp ve isimsiz verilerden kurtulmak için Python tabanlı yeni bir `seed_test_data.py` eklendi ve tüm veritabanı sıfırlandı. 
+İçerisine testler için tam **20 Kullanıcı**, **42 Ders**, **169 Not (PAPS Kilitli/Kilitsiz)** gerçekçi verilerle (Boğaziçi İşletme, ODTÜ Bilgisayar vb.) yaratıldı. Ortak şifre `password` kullanıldı.
+
+---
+
 ## ⚠️ Bilinen Hatalar / Eksikler
 
-### 1. [YENİ / KRİTİK] Canlı Ortamda "Failed to upload note"
+### 1. [KRİTİK] Canlı Ortamda "Failed to upload note"
 **Sorun:** Localde/Docker'da çözülmesine rağmen bazı canlı (production) ortamlarda görsel yükleme hâlâ hata verebiliyor.
 **Kök Neden:** Prod ortamında Pillow'un (libjpeg vb.) eksik olması veya `.env` içindeki `MINIO_SECURE` ayarının HTTPS uyumsuzluğu.
 **Kontrol:** `storage.py` içindeki `secure=not is_local` mantığı kontrol edilmeli.
@@ -80,23 +92,6 @@ Dashboard'da gelen kutusundaki (Inbox) notlar, klasörlerin üzerine sürükle-b
 **Kök Neden:** Profil sayfası `/u/:username` rotasında çalışıyor. Navbar'ın gelen URL yapısına ve JWT'den parse ettiği kullanıcı adına bakmak gerekiyor.  
 **Kontrol Edilecek Yer:** `components/Navbar.tsx` → Profile link URL'si. `pages/Profile.tsx` → `checkProfileExists()` fonksiyonu, `api.get(/api/sharing/${username})` çağrısı.  
 **İpucu:** Eğer kullanıcının `username` alanı `null` ise (kayıt sırasında atlanmışsa) backend 404 döner ve "System Error" ekrana gelir. Register'ın 2. adımında kullanıcı adı zorunlu tutulmuş olsa da eski hesaplarda bu boş kalabilir.
-
-### 2. [KRİTİK] Yeni Üyelerin Başkasına Ait Notları Görmesi
-**Sorun:** Yeni kayıt olan kullanıcı Dashboard'da ona ait olmayan notlar görüyor.  
-**Kök Neden:** `notes.py`'de `read_library_notes` endpoint'i `owner_id == current_user.id` filtresi ile çalışıyor. ANCAK bazı eski notlarda `owner_id` alanı `null` olabilir (bu alan sonradan eklendi). `null`'lar herkese görünüyor.  
-**Çözüm:** Mevcut `null` owner_id'li notları temizlemek için migration çalıştırılabilir. Ya da query'ye `models.Note.owner_id.is_not(None)` şartı eklenmeli:
-```python
-notes = db.query(models.Note).filter(
-    models.Note.owner_id == current_user.id,
-    models.Note.course_id == None,
-    models.Note.original_author == None,
-).all()
-```
-Bu zaten mevcut ama DB'deki eski kayıtlar temizlenmedi! Aşağıdaki migration çalıştırılmalı:
-```sql
-DELETE FROM notes WHERE owner_id IS NULL;
-```
-Veya yeni bir Alembic migration eklenebilir.
 
 ### 3. [ORTA] Dashboard'daki "Move" Butonu Çevirisiz
 Kart üzerindeki `Move` butonu TR/EN çevirisine bağlanmadı. `Dashboard.tsx:310` satırına bakılmalı.
@@ -160,14 +155,13 @@ pages/Explore.tsx           → Kullanıcı keşfet + arama
 
 ## 🔜 Önerilen Sonraki Adımlar (Öncelik Sırasıyla)
 
-1. **[BUG FIX]** DB'deki `owner_id = NULL` olan eski notları temizle.
-2. **[BUG FIX]** Profil sayfası "System Error" hatasının kök nedeni bulunup çözülmeli.
-3. **[FEATURE]** Avatar/Profil fotoğrafı yükleme (MinIO hazır, UI yok).
-4. **[İYİLEŞTİRME]** Navbar dil seçicisini dropdown'a çevir (mevcut toggle buton).
-5. **[İYİLEŞTİRME]** Dashboard'daki "Move" butonunu çevir.
-6. **[İYİLEŞTİRME]** Note update endpoint'ine inkbox sahiplik kontrolü ekle.
-7. **[FEATURE]** Not içeriği arama (Explore'da veya Dashboard'da).
-8. **[FEATURE]** PAPS ödeme/çekim entegrasyonu.
+1. **[BUG FIX]** Profil sayfası "System Error" hatasının kök nedeni bulunup çözülmeli.
+2. **[FEATURE]** Avatar/Profil fotoğrafı yükleme (MinIO hazır, UI yok).
+3. **[İYİLEŞTİRME]** Navbar dil seçicisini dropdown'a çevir (mevcut toggle buton).
+4. **[İYİLEŞTİRME]** Dashboard'daki "Move" butonunu çevir.
+5. **[İYİLEŞTİRME]** Note update endpoint'ine inkbox sahiplik kontrolü ekle.
+6. **[FEATURE]** Not içeriği arama (Explore'da veya Dashboard'da).
+7. **[FEATURE]** PAPS ödeme/çekim entegrasyonu.
 
 ---
 
