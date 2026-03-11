@@ -2,6 +2,8 @@ import React from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { LogOut, BookText, PlusCircle, User, Globe, ChevronDown, Wallet } from 'lucide-react';
+import { Button } from './ui/Button';
+import { useLanguage } from '../context/LanguageContext';
 
 export const Navbar: React.FC = () => {
   const { isAuthenticated, logout } = useAuth();
