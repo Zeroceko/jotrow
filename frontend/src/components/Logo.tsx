@@ -16,20 +16,20 @@ const Logo: React.FC<LogoProps> = ({ className = '', size = 32 }) => {
             className={className}
         >
             {/* Background Shape - Subtle rounded square */}
-            <rect width="40" height="40" rx="10" fill="#111827" />
+            <rect width="40" height="40" rx="8" fill="#0c0c0c" />
 
-            {/* The "J" Hook - Balanced and proportional */}
+            {/* The "J" Hook - Ultra minimalist 3-line path */}
             {/* Color: #10b981 (Jotrow Emerald) */}
             <path
-                d="M25 12V24C25 28.4183 21.4183 32 17 32C14.2386 32 12 29.7614 12 27"
+                d="M12 12H28V28C28 32.4183 24.4183 36 20 36H16"
                 stroke="#10b981"
-                strokeWidth="3.5"
+                strokeWidth="4"
                 strokeLinecap="round"
                 strokeLinejoin="round"
             />
 
-            {/* Accent dot - Aligned with the stem of the J */}
-            <circle cx="15.5" cy="15.5" r="3.5" fill="#10b981" />
+            {/* Accent dot - representing a note or focus point */}
+            <rect x="12" y="22" width="6" height="6" rx="1" fill="#10b981" />
         </svg>
     );
 };
