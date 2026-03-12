@@ -4,12 +4,17 @@ import api from '../services/api';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
-import { Upload as UploadIcon, X, ArrowLeft } from 'lucide-react';
+import { Upload as UploadIcon, X, ArrowLeft, FileText } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 
 interface Course {
   id: number;
   title: string;
+}
+
+interface UploadSuccessState {
+  noteId: number;
+  destination: string;
 }
 
 const Upload: React.FC = () => {
@@ -24,6 +29,7 @@ const Upload: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [dragActive, setDragActive] = useState(false);
+  const [uploadSuccess, setUploadSuccess] = useState<UploadSuccessState | null>(null);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -101,13 +107,11 @@ const Upload: React.FC = () => {
         formData.append('files', file);
       });
 
-      await api.post('/api/notes', formData);
-
-      if (selectedCourse) {
-        navigate(`/course/${selectedCourse}`);
-      } else {
-        navigate('/');
-      }
+      const response = await api.post('/api/notes', formData);
+      setUploadSuccess({
+        noteId: response.data.note_id,
+        destination: selectedCourse ? `/course/${selectedCourse}` : '/profile',
+      });
     } catch (err: any) {
       console.log("API ERROR RESPONSE:", err.response);
       const detail = err.response?.data?.detail;
@@ -125,13 +129,24 @@ const Upload: React.FC = () => {
     }
   };
 
+  const handlePostUploadChoice = (shouldRefineNow: boolean) => {
+    if (!uploadSuccess) return;
+
+    navigate(uploadSuccess.destination, {
+      state: {
+        focusNoteId: uploadSuccess.noteId,
+        startPrototypeCleanNoteId: shouldRefineNow ? uploadSuccess.noteId : null,
+      },
+    });
+  };
+
   return (
     <div className="p-4 md:p-8 max-w-4xl mx-auto">
       <div className="mb-8">
         <Link to="/" className="inline-flex items-center gap-2 text-retro-muted hover:text-retro-text hover:-translate-x-1 transition-transform font-mono text-sm mb-4">
           <ArrowLeft size={16} /> {t('upload.return')}
         </Link>
-        <h1 className="text-4xl font-bold uppercase tracking-tighter">{t('upload.page_title')}<span className="text-retro-accent">_</span></h1>
+        <h1 className="text-3xl font-bold uppercase tracking-tighter sm:text-4xl">{t('upload.page_title')}<span className="text-retro-accent">_</span></h1>
       </div>
 
       <Card>
@@ -180,7 +195,7 @@ const Upload: React.FC = () => {
             />
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-start gap-3">
             <input
               type="checkbox"
               id="requiresPin"
@@ -190,7 +205,7 @@ const Upload: React.FC = () => {
               checked={requiresPin}
               onChange={(e) => setRequiresPin(e.target.checked)}
             />
-            <label htmlFor="requiresPin" className="text-sm font-bold text-retro-text cursor-pointer select-none">
+            <label htmlFor="requiresPin" className="text-sm font-bold text-retro-text cursor-pointer select-none leading-snug">
               Require PIN Code / Sadece PIN ile Açılsın
             </label>
           </div>
@@ -235,7 +250,7 @@ const Upload: React.FC = () => {
           </div>
 
           {files.length > 0 && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+            <div className="grid grid-cols-2 gap-4 mt-4 sm:grid-cols-3 md:grid-cols-4">
               {files.map((file, idx) => {
                 const isPreviewable = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type);
                 return (
@@ -272,6 +287,25 @@ const Upload: React.FC = () => {
             </div>
           )}
 
+          <div className="border-2 border-dashed border-retro-accent/40 bg-retro-accent/5 p-4 sm:p-5">
+            <div className="flex items-start gap-4">
+              <div className="bg-retro-accent/10 border border-retro-accent/30 text-retro-accent p-2 shrink-0">
+                <FileText size={18} />
+              </div>
+              <div className="min-w-0">
+                <div className="text-[10px] font-bold text-retro-accent uppercase tracking-[0.2em] mb-2">
+                  {t('upload.refine_step_label')}
+                </div>
+                <h3 className="text-lg font-bold uppercase tracking-tight mb-2">
+                  {t('upload.refine_title')}
+                </h3>
+                <p className="text-retro-muted font-mono text-xs sm:text-sm leading-relaxed">
+                  {t('upload.refine_desc')}
+                </p>
+              </div>
+            </div>
+          </div>
+
           <div className="pt-6 border-t-2 border-retro-border">
             <Button
               type="submit"
@@ -283,6 +317,44 @@ const Upload: React.FC = () => {
           </div>
         </form>
       </Card>
+
+      {uploadSuccess && (
+        <div className="fixed inset-0 z-[70] bg-black/80 flex items-center justify-center p-4">
+          <Card className="w-full max-w-lg border-4 border-retro-accent shadow-[8px_8px_0px_0px_rgba(16,185,129,0.35)]">
+            <div className="space-y-5">
+              <div>
+                <div className="text-[10px] font-bold text-retro-accent uppercase tracking-[0.2em] mb-2">
+                  {t('upload.complete_step_label')}
+                </div>
+                <h2 className="text-2xl font-bold uppercase tracking-tight mb-2">
+                  {t('upload.complete_title')}
+                </h2>
+                <p className="text-retro-muted font-mono text-sm leading-relaxed">
+                  {t('upload.complete_desc')}
+                </p>
+              </div>
+
+              <div className="border-2 border-dashed border-retro-border p-4 bg-retro-bg">
+                <div className="text-sm font-bold uppercase tracking-wide mb-2">
+                  {t('upload.refine_title')}
+                </div>
+                <p className="text-retro-muted font-mono text-xs leading-relaxed">
+                  {t('upload.edit_hint')}
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+                <Button variant="secondary" onClick={() => handlePostUploadChoice(false)} className="w-full sm:w-auto">
+                  {t('upload.refine_later')}
+                </Button>
+                <Button onClick={() => handlePostUploadChoice(true)} className="w-full sm:w-auto">
+                  {t('upload.refine_now')}
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 };

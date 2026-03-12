@@ -14,6 +14,7 @@ import Wallet from './pages/Wallet';
 import './index.css';
 
 import CourseDetail from './pages/CourseDetail';
+import NoteEditor from './pages/NoteEditor';
 import NotFound from './pages/NotFound';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -48,9 +49,9 @@ function App() {
       <LanguageProvider>
         <AuthProvider>
           <Router>
-            <div className="min-h-screen bg-retro-bg text-retro-text selection:bg-retro-accent selection:text-retro-bg">
+            <div className="w-full min-h-screen bg-retro-bg text-retro-text selection:bg-retro-accent selection:text-retro-bg">
               <Navbar />
-              <main className="max-w-7xl mx-auto">
+              <main className="w-full max-w-7xl mx-auto">
                 <Routes>
                   <Route path="/" element={<RequireUsername><Root /></RequireUsername>} />
                   <Route path="/setup-profile" element={<ProtectedRoute><SetupProfile /></ProtectedRoute>} />
@@ -58,6 +59,13 @@ function App() {
                     <RequireUsername>
                       <ProtectedRoute>
                         <CourseDetail />
+                      </ProtectedRoute>
+                    </RequireUsername>
+                  } />
+                  <Route path="/notes/:noteId/edit" element={
+                    <RequireUsername>
+                      <ProtectedRoute>
+                        <NoteEditor />
                       </ProtectedRoute>
                     </RequireUsername>
                   } />

@@ -71,7 +71,7 @@ const Explore: React.FC = () => {
             : 'hover:border-retro-accent hover:shadow-solid'
             }`}
         >
-          <div className="flex items-start gap-4">
+          <div className="flex flex-col items-start gap-4 sm:flex-row">
             {/* Avatar placeholder */}
             <div
               className={`w-12 h-12 flex-shrink-0 flex items-center justify-center border-2 transition-colors ${isDemo
@@ -124,7 +124,7 @@ const Explore: React.FC = () => {
             </div>
 
             {/* CTA button */}
-            <div className="flex-shrink-0 self-start">
+            <div className="hidden flex-shrink-0 self-start md:block">
               <Button variant={isDemo ? 'primary' : 'secondary'} className="hidden md:block text-xs">
                 {isDemo ? t('exp.try_demo') : t('exp.view')}
               </Button>
@@ -148,7 +148,7 @@ const Explore: React.FC = () => {
 
       {/* Search bar */}
       <div className="bg-retro-bg border-4 border-retro-border p-4 shadow-solid">
-        <form onSubmit={handleSearch} className="flex gap-4 items-end">
+        <form onSubmit={handleSearch} className="flex flex-col gap-4 sm:flex-row sm:items-end">
           <div className="flex-1">
             <Input
               label={t('exp.search_label')}
@@ -157,13 +157,13 @@ const Explore: React.FC = () => {
               placeholder={t('exp.search_placeholder')}
             />
           </div>
-          <Button type="submit" disabled={isLoading} className="mb-1 h-[52px]">
+          <Button type="submit" disabled={isLoading} className="h-[52px] w-full sm:mb-1 sm:w-auto">
             {isLoading ? t('exp.searching') : <><Search size={20} /> {t('exp.search')}</>}
           </Button>
         </form>
         {searchResults !== null && (
-          <div className="mt-4 pt-4 border-t-2 border-retro-border border-dashed flex justify-between items-center">
-            <p className="font-mono text-sm">{t('exp.found')} {searchResults.length} {t('exp.results_for')} "{query}"</p>
+          <div className="mt-4 pt-4 border-t-2 border-retro-border border-dashed flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="font-mono text-sm break-words">{t('exp.found')} {searchResults.length} {t('exp.results_for')} "{query}"</p>
             <button onClick={clearSearch} className="text-retro-accent text-sm font-bold uppercase hover:underline">
               {t('exp.clear')}
             </button>

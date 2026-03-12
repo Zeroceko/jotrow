@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useLocation } from 'react-router-dom';
 import api from '../services/api';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Loader2, ArrowLeft, Trash2, X, ChevronLeft, ChevronRight, ZoomIn, Pencil, Check, BookOpen, Lock, Unlock } from 'lucide-react';
+import { PrototypeCleanActions } from '../components/PrototypeCleanActions';
+import { startMockClean } from '../services/mockCleanNotes';
 import { format } from 'date-fns';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
@@ -28,12 +30,15 @@ interface Course {
 
 const CourseDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const location = useLocation();
   const [course, setCourse] = useState<Course | null>(null);
   const [notes, setNotes] = useState<Note[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const { t } = useLanguage();
   const { isAuthenticated } = useAuth();
+  const flowState = (location.state as { focusNoteId?: number; startPrototypeCleanNoteId?: number } | null) || null;
+  const focusedNoteId = flowState?.focusNoteId ?? null;
 
   // Delete state
   const [deletingNoteId, setDeletingNoteId] = useState<number | null>(null);
@@ -71,6 +76,18 @@ const CourseDetail: React.FC = () => {
     };
     fetchCourseData();
   }, [id]);
+
+  useEffect(() => {
+    if (flowState?.startPrototypeCleanNoteId) {
+      startMockClean(flowState.startPrototypeCleanNoteId);
+    }
+  }, [flowState?.startPrototypeCleanNoteId]);
+
+  useEffect(() => {
+    if (!focusedNoteId || notes.length === 0) return;
+    const el = document.getElementById(`note-${focusedNoteId}`);
+    el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [focusedNoteId, notes]);
 
   // ── Note deletion ──────────────────────────────────────────────────────────
 
@@ -269,15 +286,15 @@ const CourseDetail: React.FC = () => {
               <div className="inline-block bg-retro-accent/10 border border-retro-accent/30 text-retro-accent font-bold text-[10px] px-2 py-0.5 mb-3 tracking-widest uppercase">
                 {t('cd.dir')} {course?.title ? course.title.split(' ')[0] : t('cd.course_info')}
               </div>
-              <h1 className="text-5xl md:text-6xl font-bold uppercase tracking-tighter leading-none">
-                {course?.title || `COURSE ${id}`}<span className="text-retro-accent">.</span>
-              </h1>
+            <h1 className="text-3xl md:text-6xl font-bold uppercase tracking-tighter leading-none sm:text-5xl break-words">
+              {course?.title || `COURSE ${id}`}<span className="text-retro-accent">.</span>
+            </h1>
               {course?.description && (
                 <p className="text-retro-muted font-mono text-sm mt-4 max-w-2xl leading-relaxed italic">{course.description}</p>
               )}
             </div>
-            <Link to={`/upload?courseId=${id}`}>
-              <Button className="h-16 px-8 text-xl group shadow-solid hover:shadow-solid-accent transition-all">
+            <Link to={`/upload?courseId=${id}`} className="w-full md:w-auto">
+              <Button className="h-14 w-full px-6 text-base group shadow-solid hover:shadow-solid-accent transition-all sm:h-16 sm:px-8 sm:text-xl">
                 <span className="flex items-center gap-2">
                   {t('cd.upload')}
                 </span>
@@ -287,14 +304,22 @@ const CourseDetail: React.FC = () => {
         </div>
 
         {notes.length === 0 ? (
-          <div className="border-4 border-dashed border-retro-border p-20 text-center bg-retro-panel/30">
+          <div className="border-4 border-dashed border-retro-border p-10 text-center bg-retro-panel/30 sm:p-20">
             <BookOpen className="mx-auto mb-6 text-retro-muted opacity-20" size={64} />
             <p className="text-retro-muted font-mono uppercase tracking-widest">{t('cd.empty')}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-12">
             {notes.map(note => (
-              <Card key={note.id} className="relative overflow-hidden border-2 border-retro-border hover:border-retro-accent transition-colors shadow-solid hover:shadow-solid-accent group/note duration-300">
+              <Card
+                key={note.id}
+                id={`note-${note.id}`}
+                className={`relative overflow-hidden border-2 transition-colors shadow-solid group/note duration-300 ${
+                  focusedNoteId === note.id
+                    ? 'border-retro-accent shadow-solid-accent'
+                    : 'border-retro-border hover:border-retro-accent hover:shadow-solid-accent'
+                }`}
+              >
                 <div className="flex flex-col md:flex-row gap-6">
 
                   {/* Images Section */}
@@ -370,9 +395,9 @@ const CourseDetail: React.FC = () => {
                     ) : (
                       /* ── View Mode ── */
                       <>
-                        <div className="flex items-start justify-between gap-4 mb-2">
-                          <h3 className="text-2xl font-bold uppercase truncate">{note.title}</h3>
-                          <div className="flex gap-1 flex-shrink-0">
+                        <div className="flex flex-col gap-3 mb-2 sm:flex-row sm:items-start sm:justify-between">
+                          <h3 className="text-xl font-bold uppercase break-words sm:text-2xl">{note.title}</h3>
+                          <div className="flex gap-1 flex-shrink-0 self-end sm:self-auto">
                             {!note.is_locked && (
                               <button
                                 onClick={() => startEditingNote(note)}
@@ -396,7 +421,7 @@ const CourseDetail: React.FC = () => {
                           </div>
                         </div>
 
-                        <div className="text-retro-muted font-mono text-xs mb-4 pb-4 border-b-2 border-dashed border-retro-border">
+                        <div className="text-retro-muted font-mono text-xs mb-4 pb-4 border-b-2 border-dashed border-retro-border break-words">
                           {format(new Date(note.created_at), 'MMMM dd, yyyy HH:mm')} | ID: {note.id.toString().padStart(4, '0')}
                           {note.original_author && (
                             <span className="ml-2 pl-2 border-l-2 border-retro-border inline-flex items-center">
@@ -407,6 +432,15 @@ const CourseDetail: React.FC = () => {
                         <div className="prose prose-invert prose-p:text-retro-text font-serif leading-relaxed flex-grow whitespace-pre-wrap break-words">
                           {note.content}
                         </div>
+                        <PrototypeCleanActions
+                          noteId={note.id}
+                          noteTitle={note.title}
+                          noteContent={note.content}
+                          noteImages={note.images}
+                          createdAt={note.created_at}
+                          hasAssets={note.images.length > 0}
+                          editState={{ initialNote: { id: note.id, title: note.title, content: note.content, course_id: Number(id), images: note.images, created_at: note.created_at } }}
+                        />
                       </>
                     )}
                   </div>

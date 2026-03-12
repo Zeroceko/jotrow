@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
 import api from '../services/api';
 import { Card } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
 import {
   Lock, Unlock, Loader2, BookOpen, ChevronDown, ChevronUp,
-  X, ChevronLeft, ChevronRight, ZoomIn, Bookmark, Settings, Download,
+  X, ChevronLeft, ChevronRight, ZoomIn, Bookmark, Settings,
   FolderPlus, Plus, Pencil, Trash2, Check, ArrowRight, Star, FileText
 } from 'lucide-react';
 import { format } from 'date-fns';
@@ -14,6 +14,8 @@ import { useAuth } from '../context/AuthContext';
 import { jwtDecode } from 'jwt-decode';
 import { useLanguage } from '../context/LanguageContext';
 import Onboarding from '../components/Onboarding';
+import { PrototypeCleanActions } from '../components/PrototypeCleanActions';
+import { startMockClean } from '../services/mockCleanNotes';
 
 interface ProfileProps {
   isPublic?: boolean;
@@ -53,6 +55,7 @@ interface Note {
 
 const Profile: React.FC<ProfileProps> = () => {
   const { username } = useParams<{ username: string }>();
+  const location = useLocation();
   const [profile, setProfile] = useState<UserProfile | null>(null);
 
   // Default we assume everything is open until they hit a locked note
@@ -98,12 +101,13 @@ const Profile: React.FC<ProfileProps> = () => {
   const { isAuthenticated, token } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
+  const flowState = (location.state as { focusNoteId?: number; startPrototypeCleanNoteId?: number } | null) || null;
+  const focusedNoteId = flowState?.focusNoteId ?? null;
   const [saveModalOpen, setSaveModalOpen] = useState(false);
   const [noteToSave, setNoteToSave] = useState<number | null>(null);
   const [userCourses, setUserCourses] = useState<Course[]>([]);
   const [selectedCourseId, setSelectedCourseId] = useState<number | string>('');
   const [isSaving, setIsSaving] = useState(false);
-  const [downloadingNoteId, setDownloadingNoteId] = useState<number | null>(null);
   const [newFolderName, setNewFolderName] = useState('');
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
 
@@ -120,6 +124,18 @@ const Profile: React.FC<ProfileProps> = () => {
       checkProfileExists(targetUsername);
     }
   }, [targetUsername]);
+
+  useEffect(() => {
+    if (flowState?.startPrototypeCleanNoteId) {
+      startMockClean(flowState.startPrototypeCleanNoteId);
+    }
+  }, [flowState?.startPrototypeCleanNoteId]);
+
+  useEffect(() => {
+    if (!focusedNoteId || libraryNotes.length === 0) return;
+    const el = document.getElementById(`note-${focusedNoteId}`);
+    el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [focusedNoteId, libraryNotes]);
 
   const getAuthHeaders = (tokenOverride?: string) => {
     const headers: any = {};
@@ -413,30 +429,6 @@ const Profile: React.FC<ProfileProps> = () => {
     }
   };
 
-  const handleDownloadNote = async (noteId: number) => {
-    setDownloadingNoteId(noteId);
-    try {
-      const res = await api.get(`/api/sharing/notes/${noteId}/download`, {
-        responseType: 'blob',
-      });
-      const url = window.URL.createObjectURL(new Blob([res.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      const disposition = res.headers['content-disposition'];
-      const filename = disposition?.match(/filename="(.+)"/)?.[1] || 'note.zip';
-      link.setAttribute('download', filename);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error('Download failed', err);
-      alert('İndirme başarısız oldu.');
-    } finally {
-      setDownloadingNoteId(null);
-    }
-  };
-
   // ── Lightbox ─────────────────────────────────────────────────────────────
 
   const openLightbox = (images: string[], index: number) => {
@@ -543,7 +535,7 @@ const Profile: React.FC<ProfileProps> = () => {
         {isOwnProfile && <Onboarding />}
 
         {/* Stats bar */}
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
           <div className="bg-retro-panel border-2 border-retro-border p-4 flex items-center gap-4 shadow-solid">
             <div className="bg-retro-accent/10 p-2 border border-retro-accent/30 text-retro-accent">
               <FileText size={22} />
@@ -584,7 +576,7 @@ const Profile: React.FC<ProfileProps> = () => {
                 {t('prof.read_only')}
               </div>
             )}
-            <h1 className="text-5xl md:text-6xl font-bold uppercase tracking-tighter leading-none">
+            <h1 className="text-3xl md:text-6xl font-bold uppercase tracking-tighter leading-none sm:text-5xl break-words">
               {profile.display_name || profile.username}<span className="text-retro-accent">_</span>
             </h1>
             {profile.display_name && (
@@ -601,20 +593,20 @@ const Profile: React.FC<ProfileProps> = () => {
               </p>
             )}
           </div>
-          <div className="flex gap-4 flex-shrink-0 items-end">
+          <div className="flex w-full flex-wrap gap-3 flex-shrink-0 items-end md:w-auto md:justify-end">
             {isOwnProfile && (
               <>
                 <Button
                   variant="secondary"
                   onClick={() => setIsCreating(!isCreating)}
-                  className="flex items-center gap-2 px-4 py-2 border-2 border-retro-accent text-retro-accent hover:bg-retro-accent hover:text-retro-bg font-bold tracking-widest uppercase transition-colors"
+                  className="flex w-full items-center justify-center gap-2 px-4 py-2 border-2 border-retro-accent text-retro-accent hover:bg-retro-accent hover:text-retro-bg font-bold tracking-widest uppercase transition-colors sm:w-auto"
                 >
                   <FolderPlus size={16} />
                   {isCreating ? t('dash.cancel') : t('dash.new_folder')}
                 </Button>
                 <Button
                   onClick={() => navigate('/upload')}
-                  className="flex items-center gap-2 px-4 py-2 bg-retro-accent text-retro-bg font-bold tracking-widest uppercase hover:opacity-90 shadow-solid-accent transition-all"
+                  className="flex w-full items-center justify-center gap-2 px-4 py-2 bg-retro-accent text-retro-bg font-bold tracking-widest uppercase hover:opacity-90 shadow-solid-accent transition-all sm:w-auto"
                 >
                   <Plus size={16} />
                   {t('nav.upload')}
@@ -625,7 +617,7 @@ const Profile: React.FC<ProfileProps> = () => {
               <Button
                 variant="ghost"
                 onClick={() => navigate('/settings')}
-                className="flex items-center gap-2 border-2 border-retro-border hover:border-retro-accent"
+                className="flex w-full items-center justify-center gap-2 border-2 border-retro-border hover:border-retro-accent sm:w-auto"
               >
                 <Settings size={16} />
                 <span className="font-mono text-sm">{t('profile.settings')}</span>
@@ -678,7 +670,12 @@ const Profile: React.FC<ProfileProps> = () => {
               {libraryNotes.map(note => (
                 <Card
                   key={note.id}
-                  className="relative group hover:border-retro-accent transition-all shadow-solid hover:shadow-solid-accent cursor-pointer"
+                  id={`note-${note.id}`}
+                  className={`relative group transition-all shadow-solid cursor-pointer ${
+                    focusedNoteId === note.id
+                      ? 'border-retro-accent shadow-solid-accent'
+                      : 'hover:border-retro-accent hover:shadow-solid-accent'
+                  }`}
                 >
                   <div className="flex justify-between items-start mb-2">
                     <h3 className="font-bold uppercase tracking-tighter text-lg line-clamp-2 group-hover:text-retro-accent transition-colors flex-1">
@@ -690,6 +687,16 @@ const Profile: React.FC<ProfileProps> = () => {
                       {note.content}
                     </p>
                   )}
+                  <PrototypeCleanActions
+                    noteId={note.id}
+                    noteTitle={note.title}
+                    noteContent={note.content}
+                    noteImages={note.images}
+                    createdAt={note.created_at}
+                    hasAssets={note.images.length > 0}
+                    compact={true}
+                    editState={{ initialNote: { id: note.id, title: note.title, content: note.content, course_id: null, images: note.images, created_at: note.created_at } }}
+                  />
                   {movingNoteId === note.id ? (
                     <div className="mt-3 pt-3 border-t-2 border-dashed border-retro-border space-y-2">
                       <p className="text-[10px] font-mono text-retro-muted uppercase tracking-widest">{t('dash.move_to')}</p>
@@ -831,14 +838,14 @@ const Profile: React.FC<ProfileProps> = () => {
                               </p>
                             )}
                           </div>
-                          <div className="mt-4 pt-4 border-t-2 border-retro-border border-dashed font-mono text-[10px] text-retro-muted flex items-center justify-between">
-                            <div className="flex gap-3 items-center">
+                          <div className="mt-4 pt-4 border-t-2 border-retro-border border-dashed font-mono text-[10px] text-retro-muted flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="flex flex-wrap gap-3 items-center">
                               {course.created_at && (
                                 <span className="uppercase">{format(new Date(course.created_at), 'MMM dd, yyyy')}</span>
                               )}
                               <span className="bg-retro-accent/10 text-retro-accent px-1.5 py-0.5 border border-retro-accent/30 font-bold">{course.note_count} {t('dash.notes_count')}</span>
                             </div>
-                            <div className="flex gap-1 relative z-20">
+                            <div className="flex gap-1 relative z-20 self-end sm:self-auto">
                               <button
                                 onClick={(e) => startEditing(course, e)}
                                 className="p-1.5 hover:text-retro-accent transition-colors"
@@ -884,7 +891,7 @@ const Profile: React.FC<ProfileProps> = () => {
                           onClick={() => toggleCourseNotes(course.id)}
                         >
                           <div className="flex-grow min-w-0">
-                            <div className="flex items-center gap-3">
+                            <div className="flex flex-wrap items-center gap-3">
                               <h3 className="text-xl font-bold uppercase group-hover:text-retro-accent transition-colors truncate">
                                 {course.title}
                               </h3>
@@ -966,35 +973,33 @@ const Profile: React.FC<ProfileProps> = () => {
                                           ))}
                                         </div>
                                       )}
-                                      <div className="flex-1 min-w-0 flex flex-col justify-between">
+                                        <div className="flex-1 min-w-0 flex flex-col justify-between">
                                         <div>
                                           <h4 className="font-bold uppercase text-base mb-1">{note.title}</h4>
-                                          <div className="text-retro-muted font-mono text-xs mb-2">
-                                            {format(new Date(note.created_at), 'MMM dd, yyyy')}
-                                          </div>
                                           {note.content && (
                                             <p className="text-retro-text font-serif text-sm leading-relaxed whitespace-pre-wrap line-clamp-6">
                                               {note.content}
                                             </p>
                                           )}
                                         </div>
-                                        <div className="mt-4 flex justify-end gap-2">
+                                        <PrototypeCleanActions
+                                          noteId={note.id}
+                                          noteTitle={note.title}
+                                          noteContent={note.content}
+                                          noteImages={note.images}
+                                          createdAt={note.created_at}
+                                          hasAssets={note.images.length > 0}
+                                          mode="viewer"
+                                          compact={true}
+                                        />
+                                        <div className="mt-4 flex flex-wrap gap-2">
                                           {isAuthenticated && (
-                                            <>
-                                              <button
-                                                onClick={(e) => { e.stopPropagation(); openSaveModal(note.id); }}
-                                                className="flex items-center gap-2 text-xs font-bold font-mono px-3 py-1 border-2 border-retro-text text-retro-text hover:bg-retro-text hover:text-retro-bg transition-colors"
-                                              >
-                                                <Bookmark size={14} /> {t('prof.save')}
-                                              </button>
-                                              <button
-                                                onClick={(e) => { e.stopPropagation(); handleDownloadNote(note.id); }}
-                                                disabled={downloadingNoteId === note.id}
-                                                className="flex items-center gap-2 text-xs font-bold font-mono px-3 py-1 border-2 border-retro-text text-retro-text hover:bg-retro-text hover:text-retro-bg transition-colors disabled:opacity-50"
-                                              >
-                                                {downloadingNoteId === note.id ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />} İndir
-                                              </button>
-                                            </>
+                                            <button
+                                              onClick={(e) => { e.stopPropagation(); openSaveModal(note.id); }}
+                                              className="flex items-center gap-2 text-xs font-bold font-mono px-3 py-1 border-2 border-retro-text text-retro-text hover:bg-retro-text hover:text-retro-bg transition-colors"
+                                            >
+                                              <Bookmark size={14} /> {t('prof.save')}
+                                            </button>
                                           )}
                                           <button
                                             onClick={(e) => { e.stopPropagation(); handlePraise(course.id, note.id); }}
@@ -1049,7 +1054,7 @@ const Profile: React.FC<ProfileProps> = () => {
                                 </div>
                                 <span className="hidden md:inline-block bg-retro-accent/20 text-retro-accent text-xs px-2 py-0.5 border border-retro-accent/50 font-mono">Satın Alınan</span>
                               </div>
-                              <div className="text-retro-muted font-mono text-xs mb-2">
+                              <div className="text-retro-muted font-mono text-xs mb-2 break-words">
                                 {format(new Date(note.created_at), 'MMM dd, yyyy')} • Not Sahibi:
                                 {(note as any).owner_username ? (
                                   <a href={`/u/${(note as any).owner_username}`} onClick={(e) => e.stopPropagation()} className="hover:text-retro-accent underline text-retro-text ml-1">
@@ -1059,7 +1064,7 @@ const Profile: React.FC<ProfileProps> = () => {
                                   <span className="ml-1">Bilinmiyor</span>
                                 )}
                               </div>
-                              <div className="mt-3 flex items-center gap-2">
+                              <div className="mt-3 flex flex-wrap items-center gap-2">
                                 <span className="inline-flex items-center gap-1 px-3 py-1 bg-retro-accent/10 border border-retro-accent/30 text-retro-accent font-mono text-xs font-bold group-hover:bg-retro-accent group-hover:text-retro-bg transition-colors">
                                   <Unlock size={12} />
                                   {note.paps_price > 0 ? `${note.paps_price} PAPS ile Aç` : 'PIN ile Aç'}
@@ -1088,11 +1093,11 @@ const Profile: React.FC<ProfileProps> = () => {
                           )}
                           <div className="flex-1 min-w-0 flex flex-col justify-between">
                             <div>
-                              <div className="flex justify-between items-start gap-4">
+                              <div className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-start">
                                 <h4 className="font-bold uppercase text-xl mb-1">{note.title}</h4>
                                 <span className="bg-retro-accent/20 text-retro-accent text-xs px-2 py-0.5 border border-retro-accent/50 font-mono">Satın Alınan</span>
                               </div>
-                              <div className="text-retro-muted font-mono text-xs mb-4">
+                              <div className="text-retro-muted font-mono text-xs mb-4 break-words">
                                 {format(new Date(note.created_at), 'MMM dd, yyyy')} • Not Sahibi:
                                 {(note as any).owner_username ? (
                                   <a href={`/u/${(note as any).owner_username}`} onClick={(e) => e.stopPropagation()} className="hover:text-retro-accent underline text-retro-text ml-1">
@@ -1108,15 +1113,16 @@ const Profile: React.FC<ProfileProps> = () => {
                                 </p>
                               )}
                             </div>
-                            <div className="mt-4 flex justify-end gap-2">
-                              <button
-                                onClick={(e) => { e.stopPropagation(); handleDownloadNote(note.id); }}
-                                disabled={downloadingNoteId === note.id}
-                                className="flex items-center gap-2 text-xs font-bold font-mono px-3 py-1 border-2 border-retro-text text-retro-text hover:bg-retro-text hover:text-retro-bg transition-colors disabled:opacity-50"
-                              >
-                                {downloadingNoteId === note.id ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />} İndir
-                              </button>
-                            </div>
+                            <PrototypeCleanActions
+                              noteId={note.id}
+                              noteTitle={note.title}
+                              noteContent={note.content}
+                              noteImages={note.images}
+                              createdAt={note.created_at}
+                              hasAssets={note.images.length > 0}
+                              mode="viewer"
+                              compact={true}
+                            />
                           </div>
                         </div>
                       )}

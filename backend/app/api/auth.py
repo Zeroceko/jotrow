@@ -1,24 +1,35 @@
-import random
-import string
+import re
 from datetime import timedelta
 from typing import Any
+from typing import Optional as Opt
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
+from pydantic import BaseModel, ConfigDict, field_validator
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app import models
 from app.api import deps
 from app.core import security
 from app.core.config import settings
-from pydantic import BaseModel, ConfigDict
-from typing import Optional as Opt
 
 router = APIRouter()
+REFERRAL_BONUS_PAPS = 25
 
 class UserRegister(BaseModel):
     email: str
     password: str
+    referral_handle: Opt[str] = None
+
+    @field_validator("referral_handle")
+    @classmethod
+    def normalize_referral_handle(cls, value: Opt[str]) -> Opt[str]:
+        if value is None:
+            return None
+
+        normalized = value.strip().lstrip("@")
+        return normalized or None
 
 class UserResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -50,30 +61,53 @@ def register(
             status_code=400,
             detail="The user with this email already exists in the system.",
         )
-    
+
+    referrer = None
+    if user_in.referral_handle:
+        referrer = db.query(models.User).filter(
+            func.lower(models.User.username) == user_in.referral_handle.lower()
+        ).first()
+        if not referrer:
+            raise HTTPException(status_code=400, detail="Referral code not found.")
+
     user = models.User(
         email=user_in.email,
         hashed_password=security.get_password_hash(user_in.password),
         share_code=None,
         paps_balance=100,
+        referred_by_user_id=referrer.id if referrer else None,
     )
     db.add(user)
-    db.commit()
-    db.refresh(user)
+    db.flush()
 
-    # 100 PAPS registration bonus transaction
-    tx = models.Transaction(
+    if not user.username:
+        user.username = f"user_{user.id}"
+
+    db.add(models.Transaction(
         user_id=user.id,
         type="topup",
         amount=100,
         description="Ilk Kayit Hediyesi"
-    )
-    db.add(tx)
+    ))
+
+    if referrer:
+        user.paps_balance += REFERRAL_BONUS_PAPS
+        referrer.paps_balance += REFERRAL_BONUS_PAPS
+        db.add(models.Transaction(
+            user_id=user.id,
+            type="topup",
+            amount=REFERRAL_BONUS_PAPS,
+            description=f"Arkadas daveti bonusu: @{referrer.username}"
+        ))
+        db.add(models.Transaction(
+            user_id=referrer.id,
+            type="topup",
+            amount=REFERRAL_BONUS_PAPS,
+            description="Arkadasini davet bonusu"
+        ))
+
     db.commit()
-    
-    if not user.username:
-        user.username = f"user_{user.id}"
-        db.commit()
+    db.refresh(user)
 
     # Auto-login
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
@@ -102,7 +136,7 @@ def login_access_token(
         user = db.query(models.User).filter(models.User.username == form_data.username).first()
 
     if not user or not security.verify_password(form_data.password, user.hashed_password):
-        raise HTTPException(status_code=400, detail="Incorrect email or password")
+        raise HTTPException(status_code=400, detail="Incorrect email, username, or password")
         
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     return {
@@ -113,8 +147,6 @@ def login_access_token(
         "user_id": user.id,
         "email": user.email or "",
     }
-from pydantic import BaseModel, ConfigDict, field_validator
-import re
 
 class UserUpdate(BaseModel):
     username: str

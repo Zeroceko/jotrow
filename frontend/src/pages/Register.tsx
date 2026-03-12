@@ -5,12 +5,14 @@ import { useAuth } from '../context/AuthContext';
 import { Card } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
-import { Loader2, Mail, ShieldCheck } from 'lucide-react';
+import { ChevronDown, ChevronUp, Loader2, Mail, ShieldCheck, User } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 
 const Register: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [referralHandle, setReferralHandle] = useState('');
+  const [showReferralField, setShowReferralField] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -26,14 +28,20 @@ const Register: React.FC = () => {
     try {
       const response = await api.post('/auth/register', {
         email,
-        password
+        password,
+        referral_handle: showReferralField ? referralHandle.trim() || null : null,
       });
       // Auto-login with the returned token
       login(response.data.access_token);
       // Let RequireUsername handle the redirect to SetupProfile
       navigate('/');
     } catch (err: any) {
-      setError(err.response?.data?.detail || t('reg.fail'));
+      const detail = err.response?.data?.detail;
+      if (detail === 'Referral handle not found.' || detail === 'Referral code not found.') {
+        setError(t('reg.referral_not_found'));
+      } else {
+        setError(detail || t('reg.fail'));
+      }
     } finally {
       setIsLoading(false);
     }
@@ -54,31 +62,75 @@ const Register: React.FC = () => {
         )}
 
         <form onSubmit={handleRegister} className="space-y-6">
-          <div className="relative">
-            <Input
-              label={t('reg.email_label')}
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              placeholder="user@network.com"
-              className="pl-12"
-            />
-            <Mail className="absolute left-4 top-[38px] text-retro-muted" size={20} />
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-retro-muted tracking-widest uppercase">
+              {t('reg.email_label')}
+            </label>
+            <div className="relative">
+              <Input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                placeholder="user@network.com"
+                className="pl-14"
+              />
+              <Mail className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-retro-muted" size={20} />
+            </div>
           </div>
 
-          <div className="relative">
-            <Input
-              label={t('reg.pwd_label')}
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={6}
-              placeholder="••••••••"
-              className="pl-12"
-            />
-            <ShieldCheck className="absolute left-4 top-[38px] text-retro-muted" size={20} />
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-retro-muted tracking-widest uppercase">
+              {t('reg.pwd_label')}
+            </label>
+            <div className="relative">
+              <Input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={6}
+                placeholder="••••••••"
+                className="pl-14"
+              />
+              <ShieldCheck className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-retro-muted" size={20} />
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <button
+              type="button"
+              onClick={() => {
+                setShowReferralField((prev) => !prev);
+                if (error === t('reg.referral_not_found')) {
+                  setError('');
+                }
+              }}
+              className="w-full flex items-center justify-between px-4 py-3 border-2 border-dashed border-retro-border text-retro-muted font-mono text-xs font-bold uppercase tracking-[0.2em] hover:border-retro-accent hover:text-retro-accent transition-colors"
+            >
+              <span>{t('reg.referral_label')}</span>
+              {showReferralField ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            </button>
+
+            {showReferralField && (
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-retro-muted tracking-widest uppercase">
+                  {t('reg.referral_field_label')}
+                </label>
+                <div className="relative">
+                  <Input
+                    type="text"
+                    value={referralHandle}
+                    onChange={(e) => setReferralHandle(e.target.value.replace(/^@+/, '').replace(/[^a-zA-Z0-9_]/g, ''))}
+                    placeholder={t('reg.referral_placeholder')}
+                    className="pl-14"
+                    autoComplete="off"
+                    spellCheck="false"
+                  />
+                  <User className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-retro-muted" size={20} />
+                </div>
+              </div>
+            )}
           </div>
 
           <Button

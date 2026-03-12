@@ -66,6 +66,7 @@ const Login: React.FC = () => {
             required
             autoComplete="off"
             spellCheck="false"
+            placeholder={t('login.email_placeholder')}
           />
           <Input
             label={t('login.pwd_label')}

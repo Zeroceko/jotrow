@@ -13,27 +13,27 @@ const Home: React.FC = () => {
     return (
         <div className="flex flex-col items-center">
             {/* Hero Section */}
-            <section className="py-20 px-4 text-center max-w-4xl mx-auto">
-                <h1 className="text-5xl md:text-7xl font-bold uppercase tracking-tighter mb-6 leading-tight">
+            <section className="py-16 px-4 text-center max-w-4xl mx-auto sm:py-20">
+                <h1 className="text-4xl md:text-7xl font-bold uppercase tracking-tighter mb-6 leading-tight sm:text-6xl">
                     {t('home.hero.title_1')} <br />
                     <span className="text-retro-accent underline decoration-4 underline-offset-8">{t('home.hero.title_2')}</span>{t('home.hero.title_3')}
                 </h1>
 
-                <p className="text-xl text-retro-muted font-mono mb-10 max-w-2xl mx-auto leading-relaxed">
+                <p className="text-lg text-retro-muted font-mono mb-10 max-w-2xl mx-auto leading-relaxed sm:text-xl">
                     {t('home.hero.desc')}
                 </p>
 
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
                     <Button
                         onClick={() => navigate(isAuthenticated ? '/' : '/register')}
-                        className="text-lg py-4 px-10"
+                        className="w-full text-lg py-4 px-6 sm:w-auto sm:px-10"
                     >
                         {isAuthenticated ? t('home.hero.launch') : t('home.hero.start')}
                     </Button>
                     <Button
                         variant="secondary"
                         onClick={() => navigate('/explore')}
-                        className="text-lg py-4 px-10"
+                        className="w-full text-lg py-4 px-6 sm:w-auto sm:px-10"
                     >
                         {t('home.hero.explore')}
                     </Button>
@@ -41,7 +41,7 @@ const Home: React.FC = () => {
             </section>
 
             {/* Why Section */}
-            <section className="py-20 w-full bg-retro-panel border-y-2 border-retro-border">
+            <section className="py-16 w-full bg-retro-panel border-y-2 border-retro-border sm:py-20">
                 <div className="max-w-7xl mx-auto px-4 grid md:grid-cols-3 gap-12">
                     <div className="flex flex-col items-center text-center group">
                         <div className="bg-retro-bg p-5 border-2 border-retro-accent mb-6 transform group-hover:-rotate-3 transition-transform">
@@ -76,10 +76,10 @@ const Home: React.FC = () => {
             </section>
 
             {/* PIN Section */}
-            <section className="py-20 px-4 text-center max-w-2xl mx-auto">
-                <div className="bg-retro-bg border-4 border-dashed border-retro-border p-8 relative overflow-hidden">
+            <section className="py-16 px-4 text-center max-w-2xl mx-auto sm:py-20">
+                <div className="bg-retro-bg border-4 border-dashed border-retro-border p-6 relative overflow-hidden sm:p-8">
                     <div className="absolute top-0 left-0 w-full h-1 bg-retro-accent"></div>
-                    <h2 className="text-3xl font-bold mb-4 uppercase italic tracking-widest text-retro-accent">{t('home.pin.title')}</h2>
+                    <h2 className="text-2xl font-bold mb-4 uppercase italic tracking-widest text-retro-accent sm:text-3xl">{t('home.pin.title')}</h2>
                     <p className="text-retro-text font-mono mb-6">
                         {t('home.pin.desc_1')}
                         <br />{t('home.pin.desc_2')}<span className="text-white">/u/[username]</span>{t('home.pin.desc_3')}
@@ -95,10 +95,10 @@ const Home: React.FC = () => {
             </section>
 
             {/* Footer-ish CTA */}
-            <section className="py-20 text-center">
-                <h2 className="text-4xl font-bold mb-8 uppercase tracking-tighter">{t('home.cta.title')}</h2>
+            <section className="py-16 px-4 text-center sm:py-20">
+                <h2 className="text-3xl font-bold mb-8 uppercase tracking-tighter sm:text-4xl">{t('home.cta.title')}</h2>
                 <Link to="/register">
-                    <Button variant="primary" className="text-xl py-4 px-12">
+                    <Button variant="primary" className="w-full text-lg py-4 px-8 sm:w-auto sm:text-xl sm:px-12">
                         {t('home.cta.button')}
                     </Button>
                 </Link>

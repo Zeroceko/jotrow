@@ -50,12 +50,55 @@ class NoteResponse(BaseModel):
     id: int
     title: str
     content: Optional[str]
+    course_id: Optional[int] = None
     created_at: datetime.datetime
     images: List[str] = []
     praise_count: int = 0
     original_author: Optional[str] = None
     paps_price: int = 0
     is_locked: bool = False
+
+
+def _get_owned_note(
+    note_id: int,
+    db: Session,
+    current_user: models.User,
+) -> models.Note:
+    note = db.query(models.Note).filter(models.Note.id == note_id).first()
+    if not note:
+        raise HTTPException(status_code=404, detail="Note not found")
+
+    if note.course_id is not None:
+        course = db.query(models.Course).filter(
+            models.Course.id == note.course_id,
+            models.Course.owner_id == current_user.id,
+        ).first()
+        if not course:
+            raise HTTPException(status_code=403, detail="Not authorized")
+    elif note.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    return note
+
+
+def _serialize_note(note: models.Note) -> dict[str, Any]:
+    image_urls = [
+        storage.get_presigned_url(img.minio_key)
+        for img in note.images
+        if img.minio_key
+    ]
+    return {
+        "id": note.id,
+        "title": note.title,
+        "content": note.content,
+        "course_id": note.course_id,
+        "created_at": note.created_at,
+        "images": image_urls,
+        "praise_count": note.praise_count or 0,
+        "original_author": note.original_author,
+        "paps_price": note.paps_price or 0,
+        "is_locked": False,
+    }
 
 
 # ── Course Endpoints ──────────────────────────────────────────────────────────
@@ -110,20 +153,7 @@ def read_library_notes(
     # This is safe because existing data all has course_id set.
     result = []
     for note in notes:
-        image_urls = [
-            storage.get_presigned_url(img.minio_key)
-            for img in note.images
-            if img.minio_key
-        ]
-        result.append({
-            "id": note.id,
-            "title": note.title,
-            "content": note.content,
-            "created_at": note.created_at,
-            "images": image_urls,
-            "praise_count": note.praise_count or 0,
-            "original_author": note.original_author,
-        })
+        result.append(_serialize_note(note))
     return result
 
 
@@ -231,21 +261,18 @@ def read_notes(
 
     result = []
     for note in notes:
-        image_urls = [
-            storage.get_presigned_url(img.minio_key)
-            for img in note.images
-            if img.minio_key
-        ]
-        result.append({
-            "id": note.id,
-            "title": note.title,
-            "content": note.content,
-            "created_at": note.created_at,
-            "images": image_urls,
-            "praise_count": note.praise_count or 0,
-            "original_author": note.original_author,
-        })
+        result.append(_serialize_note(note))
     return result
+
+
+@router.get("/notes/{note_id}", response_model=NoteResponse)
+def read_note(
+    note_id: int,
+    db: Session = Depends(deps.get_db),
+    current_user: models.User = Depends(deps.get_current_user),
+) -> Any:
+    note = _get_owned_note(note_id, db, current_user)
+    return _serialize_note(note)
 
 
 @router.post("/notes")
@@ -298,18 +325,7 @@ def update_note(
     db: Session = Depends(deps.get_db),
     current_user: models.User = Depends(deps.get_current_user),
 ) -> Any:
-    # Support notes with or without a course
-    note = db.query(models.Note).filter(models.Note.id == note_id).first()
-    if not note:
-        raise HTTPException(status_code=404, detail="Note not found")
-    # Ownership check
-    if note.course_id is not None:
-        course = db.query(models.Course).filter(
-            models.Course.id == note.course_id,
-            models.Course.owner_id == current_user.id,
-        ).first()
-        if not course:
-            raise HTTPException(status_code=403, detail="Not authorized")
+    note = _get_owned_note(note_id, db, current_user)
 
     if note_in.title is not None:
         note.title = note_in.title
@@ -318,21 +334,7 @@ def update_note(
 
     db.commit()
     db.refresh(note)
-
-    image_urls = [
-        storage.get_presigned_url(img.minio_key)
-        for img in note.images
-        if img.minio_key
-    ]
-    return {
-        "id": note.id,
-        "title": note.title,
-        "content": note.content,
-        "created_at": note.created_at,
-        "images": image_urls,
-        "praise_count": note.praise_count or 0,
-        "original_author": note.original_author,
-    }
+    return _serialize_note(note)
 
 
 @router.put("/notes/{note_id}/move")
@@ -343,9 +345,7 @@ def move_note(
     current_user: models.User = Depends(deps.get_current_user),
 ) -> Any:
     """Move a note to a course, or back to library root (course_id=null)."""
-    note = db.query(models.Note).filter(models.Note.id == note_id).first()
-    if not note:
-        raise HTTPException(status_code=404, detail="Note not found")
+    note = _get_owned_note(note_id, db, current_user)
 
     if move_in.course_id is not None:
         course = db.query(models.Course).filter(
@@ -366,17 +366,7 @@ def delete_note(
     db: Session = Depends(deps.get_db),
     current_user: models.User = Depends(deps.get_current_user),
 ) -> None:
-    note = db.query(models.Note).filter(models.Note.id == note_id).first()
-    if not note:
-        raise HTTPException(status_code=404, detail="Note not found")
-    # Ownership check
-    if note.course_id is not None:
-        course = db.query(models.Course).filter(
-            models.Course.id == note.course_id,
-            models.Course.owner_id == current_user.id,
-        ).first()
-        if not course:
-            raise HTTPException(status_code=403, detail="Not authorized")
+    note = _get_owned_note(note_id, db, current_user)
 
     # Delete MinIO images first
     for img in note.images:
@@ -395,11 +385,7 @@ def add_images_to_note(
     current_user: models.User = Depends(deps.get_current_user),
 ) -> Any:
     """Add images to an existing note owned by the current user."""
-    note = db.query(models.Note).filter(models.Note.id == note_id).first()
-    if not note:
-        raise HTTPException(status_code=404, detail="Note not found")
-    if note.owner_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Not authorized")
+    note = _get_owned_note(note_id, db, current_user)
 
     import io
     added = []
