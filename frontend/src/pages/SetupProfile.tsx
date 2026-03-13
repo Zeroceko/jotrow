@@ -16,7 +16,7 @@ const SetupProfile: React.FC = () => {
 
     const navigate = useNavigate();
     const { t } = useLanguage();
-    const { user } = useAuth();
+    const { user, login } = useAuth();
 
     useEffect(() => {
         // Use the username from the JWT (already decoded in AuthContext)
@@ -41,12 +41,10 @@ const SetupProfile: React.FC = () => {
 
         try {
             const res = await api.put('/auth/me', { username });
-            // Backend returns a new JWT with the updated username — save it
             if (res.data.access_token) {
-                localStorage.setItem('token', res.data.access_token);
+                login(res.data.access_token);
             }
-            // Force a hard reload so the entire app context picks up the new token
-            window.location.href = '/';
+            navigate('/');
         } catch (err: any) {
             setError(err.response?.data?.detail || t('reg.fail_user') || 'Failed to update username');
         } finally {
@@ -103,7 +101,7 @@ const SetupProfile: React.FC = () => {
                     </Button>
 
                     <p className="text-center text-[10px] text-retro-muted font-mono uppercase tracking-widest opacity-50 mt-4">
-                        YOU MUST CHOOSE A HANDLE TO CONTINUE
+                        {t('reg.modify_later') || 'Identity can be modified later in settings.'}
                     </p>
                 </form>
             </Card>
